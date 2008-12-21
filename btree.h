@@ -36,7 +36,7 @@ using std::endl;
 // Nothing to do
 #else
 // TODO: This is not aligned! It doesn't matter for this implementation, but it could
-inline int posix_memalign(void** result, int, size_t bytes) {
+static inline int posix_memalign(void** result, int, size_t bytes) {
     *result = malloc(bytes);
     return *result == NULL;
 }
