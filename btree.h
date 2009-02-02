@@ -160,7 +160,7 @@ bool del(const KEY& key) {
 // item is. If we were to insert key into the tree, it would go after this item. This is weird,
 // but is easier than implementing iterators. In STL terms, this would be "lower_bound(key)--"
 // WARNING: This does *not* work when values are deleted. Thankfully, TPC-C does not use deletes.
-bool findLastLessThan(const KEY& key, VALUE* value= 0) const {
+bool findLastLessThan(const KEY& key, VALUE* value = 0, KEY* out_key = 0) const {
     const void* node = root;
     unsigned int d = depth;
     while( d-- != 0 ) {
@@ -185,10 +185,13 @@ bool findLastLessThan(const KEY& key, VALUE* value= 0) const {
 
         if (pos < leaf->num_keys) {
             assert(leaf->keys[pos] < key);
-            if (value != NULL) {
-                *value = leaf->values[pos];
-            }
             if (leaf->values[pos]) {
+                if (value != NULL) {
+                    *value = leaf->values[pos];
+                }
+                if (out_key != NULL) {
+                    *out_key = leaf->keys[pos];
+                }
                 return true;
             }
         }

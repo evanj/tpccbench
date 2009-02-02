@@ -65,21 +65,31 @@ TEST_F(BTreeTest, FindLastLessThan) {
     EXPECT_FALSE(tree_.findLastLessThan(52));
 
     // This works
-    EXPECT_TRUE(tree_.findLastLessThan(100, &output_));
+    int out_key;
+    EXPECT_TRUE(tree_.findLastLessThan(100, &output_, &out_key));
     EXPECT_EQ(1, output_);
+    EXPECT_EQ(52, out_key);
 
     tree_.insert(50, 2);
-    EXPECT_TRUE(tree_.findLastLessThan(53, &output_));
+    EXPECT_TRUE(tree_.findLastLessThan(53, &output_, &out_key));
     EXPECT_EQ(1, output_);
-    EXPECT_TRUE(tree_.findLastLessThan(52, &output_));
+    EXPECT_EQ(52, out_key);
+    EXPECT_TRUE(tree_.findLastLessThan(52, &output_, &out_key));
     EXPECT_EQ(2, output_);
-    EXPECT_TRUE(tree_.findLastLessThan(51, &output_));
+    EXPECT_EQ(50, out_key);
+    EXPECT_TRUE(tree_.findLastLessThan(51, &output_, &out_key));
     EXPECT_EQ(2, output_);
-    EXPECT_FALSE(tree_.findLastLessThan(50, &output_));
+    EXPECT_EQ(50, out_key);
+    output_ = -1;
+    out_key = -1;
+    EXPECT_FALSE(tree_.findLastLessThan(50, &output_, &out_key));
+    EXPECT_EQ(-1, output_);
+    EXPECT_EQ(-1, out_key);
 
     tree_.insert(49, 3);
-    EXPECT_TRUE(tree_.findLastLessThan(52, &output_));
+    EXPECT_TRUE(tree_.findLastLessThan(52, &output_, &out_key));
     EXPECT_EQ(2, output_);
+    EXPECT_EQ(50, out_key);
 }
 
 #ifdef BUGGY
