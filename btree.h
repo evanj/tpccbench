@@ -18,16 +18,6 @@
 using std::cout;
 using std::endl;
 
-#if defined DEBUG_ASSERT
-#    warning "DEBUG_ASSERT overloaded"
-#else
-#    if defined DEBUG
-#        define DEBUG_ASSERT(expr) assert(expr)
-#    else
-#        define DEBUG_ASSERT(expr)
-#    endif
-#endif
-
 #ifdef __linux__
 #define HAVE_POSIX_MEMALIGN
 #endif
@@ -77,13 +67,13 @@ public:
                 bool was_split;
                 if( depth == 0 ) {
                         // The root is a leaf node
-                        DEBUG_ASSERT( *reinterpret_cast<NodeType*>(root) == 
+                        assert( *reinterpret_cast<NodeType*>(root) == 
                                 NODE_LEAF);
                         was_split= leaf_insert(reinterpret_cast<LeafNode*>
                                 (root), key, value, &result);
                 } else {
                         // The root is an inner node
-                        DEBUG_ASSERT( *reinterpret_cast<NodeType*>
+                        assert( *reinterpret_cast<NodeType*>
                                 (root) == NODE_INNER );
                         was_split= inner_insert(reinterpret_cast<InnerNode*>
                                 (root), depth, key, value, &result);
@@ -111,12 +101,12 @@ bool find(const KEY& key, VALUE* value= 0) const {
   register unsigned d= depth, index;
   while( d-- != 0 ) {
     inner= reinterpret_cast<const InnerNode*>(node);
-    DEBUG_ASSERT( inner->type == NODE_INNER );
+    assert( inner->type == NODE_INNER );
     index= inner_position_for(key, inner->keys, inner->num_keys);
     node= inner->children[index];
   }
   const LeafNode* leaf= reinterpret_cast<const LeafNode*>(node);
-  DEBUG_ASSERT( leaf->type == NODE_LEAF );
+  assert( leaf->type == NODE_LEAF );
   index= leaf_position_for(key, leaf->keys, leaf->num_keys);
   if( leaf->keys[index] == key ) {
     if( value != 0 ) {
@@ -141,12 +131,12 @@ bool del(const KEY& key) {
   register unsigned d= depth, index;
   while( d-- != 0 ) {
     inner= reinterpret_cast<InnerNode*>(node);
-    DEBUG_ASSERT( inner->type == NODE_INNER );
+    assert( inner->type == NODE_INNER );
     index= inner_position_for(key, inner->keys, inner->num_keys);
     node= inner->children[index];
   }
   LeafNode* leaf= reinterpret_cast<LeafNode*>(node);
-  DEBUG_ASSERT( leaf->type == NODE_LEAF );
+  assert( leaf->type == NODE_LEAF );
   index= leaf_position_for(key, leaf->keys, leaf->num_keys);
   if( leaf->keys[index] == key ) {
     leaf->values[index] = 0;
@@ -165,7 +155,7 @@ bool findLastLessThan(const KEY& key, VALUE* value = 0, KEY* out_key = 0) const 
     unsigned int d = depth;
     while( d-- != 0 ) {
         const InnerNode* inner = reinterpret_cast<const InnerNode*>(node);
-        DEBUG_ASSERT( inner->type == NODE_INNER );
+        assert( inner->type == NODE_INNER );
         unsigned int pos = inner_position_for(key, inner->keys, inner->num_keys);
         // We need to rewind in the case where they are equal
         if (pos > 0 && key == inner->keys[pos-1]) {
@@ -175,7 +165,7 @@ bool findLastLessThan(const KEY& key, VALUE* value = 0, KEY* out_key = 0) const 
         node = inner->children[pos];
     }
     const LeafNode* leaf= reinterpret_cast<const LeafNode*>(node);
-    DEBUG_ASSERT( leaf->type == NODE_LEAF );
+    assert( leaf->type == NODE_LEAF );
     unsigned int pos = leaf_position_for(key, leaf->keys, leaf->num_keys);
     if (pos <= leaf->num_keys) {
         pos -= 1;
@@ -219,7 +209,7 @@ private:
 
         // Leaf nodes store pairs of keys and values.
         struct LeafNode {
-#ifdef DEBUG
+#ifndef NDEBUG
 	  LeafNode() : type(NODE_LEAF), num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
                 const NodeType type;
 #else
@@ -233,8 +223,8 @@ private:
 
         // Inner nodes store pointers to other nodes interleaved with keys.
         struct InnerNode {
-#ifdef DEBUG
-                InnerNode() : type(NODE_INNER), num_keys(0) {memset(keys,0,sizeof(KEY)*M}
+#ifndef NDEBUG
+                InnerNode() : type(NODE_INNER), num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
                 const NodeType type;
 #else
                 InnerNode() : num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
@@ -275,7 +265,7 @@ private:
 
         // Frees a leaf node previously allocated with new_leaf_node()
         void delete_leaf_node(LeafNode* node) {
-                DEBUG_ASSERT( node->type == NODE_LEAF );
+                assert( node->type == NODE_LEAF );
                 //cout << "Deleting LeafNode at " << node << endl;
                 // Alternatively: delete node;
                 leafPool.destroy(node);
@@ -292,7 +282,7 @@ private:
 
         // Frees an inner node previously allocated with new_inner_node()
         void delete_inner_node(InnerNode* node) {
-                DEBUG_ASSERT( node->type == NODE_INNER );
+                assert( node->type == NODE_INNER );
                 //cout << "Deleting InnerNode at " << node << endl;
                 // Alternatively: delete node;
                 innerPool.destroy(node);
@@ -352,7 +342,7 @@ private:
 
         bool leaf_insert(LeafNode* node, KEY& key,
                         VALUE& value, InsertionResult* result) {
-                DEBUG_ASSERT( node->type == NODE_LEAF );
+                assert( node->type == NODE_LEAF );
                 assert( node->num_keys <= M );
                 bool was_split= false;
                 // Simple linear search
@@ -390,7 +380,7 @@ private:
 
         static void leaf_insert_nonfull(LeafNode* node, KEY& key, VALUE& value,
                         unsigned index) {
-                DEBUG_ASSERT( node->type == NODE_LEAF );
+                assert( node->type == NODE_LEAF );
                 assert( node->num_keys < M );
                 assert( index <= M );
                 assert( index <= node->num_keys );
@@ -413,7 +403,7 @@ private:
 
         bool inner_insert(InnerNode* node, unsigned current_depth, KEY& key,
                         VALUE& value, InsertionResult* result) {
-                DEBUG_ASSERT( node->type == NODE_INNER );
+                assert( node->type == NODE_INNER );
                 assert( current_depth != 0 );
                 // Early split if node is full.
                 // This is not the canonical algorithm for B+ trees,
@@ -453,7 +443,7 @@ private:
 
         void inner_insert_nonfull(InnerNode* node, unsigned current_depth, KEY& key,
                         VALUE& value) {
-                DEBUG_ASSERT( node->type == NODE_INNER );
+                assert( node->type == NODE_INNER );
                 assert( node->num_keys < N );
                 assert( current_depth != 0 );
                 // Simple linear search
@@ -465,7 +455,7 @@ private:
                 if( current_depth-1 == 0 ) {
                         // The children are leaf nodes
                         for(unsigned kk=0; kk < node->num_keys+1; ++kk) {
-                                DEBUG_ASSERT( *reinterpret_cast<NodeType*>
+                                assert( *reinterpret_cast<NodeType*>
                                         (node->children[kk]) == NODE_LEAF );
                         }
                         was_split= leaf_insert(reinterpret_cast<LeafNode*>
@@ -473,7 +463,7 @@ private:
                 } else {
                         // The children are inner nodes
                         for(unsigned kk=0; kk < node->num_keys+1; ++kk) {
-                                DEBUG_ASSERT( *reinterpret_cast<NodeType*>
+                                assert( *reinterpret_cast<NodeType*>
                                         (node->children[kk]) == NODE_INNER );
                         }
                         InnerNode* child= reinterpret_cast<InnerNode*>
