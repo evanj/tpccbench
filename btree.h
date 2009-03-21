@@ -183,6 +183,12 @@ bool findLastLessThan(const KEY& key, VALUE* value = 0, KEY* out_key = 0) const 
                     *out_key = leaf->keys[pos];
                 }
                 return true;
+            } else {
+                // This is a deleted key! Try again with the new key value
+                // HACK: This is because this implementation doesn't do deletes correctly. However,
+                // this makes it work. We need this for TPC-C undo. The solution is to use a
+                // more complete b-tree implementation.
+                return findLastLessThan(leaf->keys[pos], value, out_key);
             }
         }
     }

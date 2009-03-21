@@ -92,7 +92,6 @@ TEST_F(BTreeTest, FindLastLessThan) {
     EXPECT_EQ(50, out_key);
 }
 
-#ifdef BUGGY
 // This test currently fails: findLastLessThan does not work when things are deleted.
 TEST_F(BTreeTest, FindLastLessThanDeleted) {
     tree_.insert(52, 1);
@@ -101,7 +100,6 @@ TEST_F(BTreeTest, FindLastLessThanDeleted) {
     EXPECT_TRUE(tree_.findLastLessThan(53, &output_));
     EXPECT_EQ(2, output_);
 }
-#endif
 
 TEST_F(BTreeTest, FindLastLessThan2) { 
     tree_.insert(42, -1);
@@ -122,20 +120,20 @@ TEST_F(BTreeTest, FindLastLessThan2) {
 // Runs find, lower_bound, and upper_bound in both the STL set and the B-tree_.
 bool doFind(const map<int, int>& std_map, const BPlusTree<int, int, 3, 3>& tree, const int key) {
     // Test the weird "find first less than". Not compatible with deletes
-    //~ map<int, int>::const_iterator i = std_map.lower_bound(key);
-    //~ int map_less_than = -2;
-    //~ if (i != std_map.begin()) {
-        //~ // Go back one
-        //~ --i;
-        //~ ASSERT(i->first < key);
-        //~ map_less_than = i->second;
-    //~ }
+    map<int, int>::const_iterator i = std_map.lower_bound(key);
+    int map_less_than = -2;
+    if (i != std_map.begin()) {
+        // Go back one
+        --i;
+        ASSERT(i->first < key);
+        map_less_than = i->second;
+    }
 
-    //~ int tree_less_than = -2;
-    //~ tree.findLastLessThan(key, &tree_less_than);
-    //~ ASSERT(map_less_than == tree_less_than);
-    
-    map<int, int>::const_iterator i = std_map.find(key);
+    int tree_less_than = -2;
+    tree.findLastLessThan(key, &tree_less_than);
+    ASSERT(map_less_than == tree_less_than);
+
+    i = std_map.find(key);
     int output = 0;
     bool tree_found = tree.find(key, &output);
     if (i != std_map.end()) {
