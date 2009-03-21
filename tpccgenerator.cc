@@ -96,10 +96,10 @@ void TPCCGenerator::generateWarehouse(int32_t id, Warehouse* warehouse) {
     warehouse->w_tax = makeTax(random_);
     warehouse->w_ytd = Warehouse::INITIAL_YTD;
     random_->astring(warehouse->w_name, Warehouse::MIN_NAME, Warehouse::MAX_NAME);
-    random_->astring(warehouse->w_street_1, Warehouse::MIN_STREET, Warehouse::MAX_STREET);
-    random_->astring(warehouse->w_street_2, Warehouse::MIN_STREET, Warehouse::MAX_STREET);
-    random_->astring(warehouse->w_city, Warehouse::MIN_CITY, Warehouse::MAX_CITY);
-    random_->astring(warehouse->w_state, Warehouse::STATE, Warehouse::STATE);
+    random_->astring(warehouse->w_street_1, Address::MIN_STREET, Address::MAX_STREET);
+    random_->astring(warehouse->w_street_2, Address::MIN_STREET, Address::MAX_STREET);
+    random_->astring(warehouse->w_city, Address::MIN_CITY, Address::MAX_CITY);
+    random_->astring(warehouse->w_state, Address::STATE, Address::STATE);
     makeZip(random_, warehouse->w_zip);
 }
 
@@ -129,10 +129,10 @@ void TPCCGenerator::generateDistrict(int32_t id, int32_t w_id, District* distric
     district->d_ytd = District::INITIAL_YTD;
     district->d_next_o_id = customers_per_district_ + 1;
     random_->astring(district->d_name, District::MIN_NAME, District::MAX_NAME);
-    random_->astring(district->d_street_1, District::MIN_STREET, District::MAX_STREET);
-    random_->astring(district->d_street_2, District::MIN_STREET, District::MAX_STREET);
-    random_->astring(district->d_city, District::MIN_CITY, District::MAX_CITY);
-    random_->astring(district->d_state, District::STATE, District::STATE);
+    random_->astring(district->d_street_1, Address::MIN_STREET, Address::MAX_STREET);
+    random_->astring(district->d_street_2, Address::MIN_STREET, Address::MAX_STREET);
+    random_->astring(district->d_city, Address::MIN_CITY, Address::MAX_CITY);
+    random_->astring(district->d_state, Address::STATE, Address::STATE);
     makeZip(random_, district->d_zip);
 }
 
@@ -157,10 +157,10 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id, boo
         random_->lastName(customer->c_last, customers_per_district_);
     }
 
-    random_->astring(customer->c_street_1, Customer::MIN_STREET, Customer::MAX_STREET);
-    random_->astring(customer->c_street_2, Customer::MIN_STREET, Customer::MAX_STREET);
-    random_->astring(customer->c_city, Customer::MIN_CITY, Customer::MAX_CITY);
-    random_->astring(customer->c_state, Customer::STATE, Customer::STATE);
+    random_->astring(customer->c_street_1, Address::MIN_STREET, Address::MAX_STREET);
+    random_->astring(customer->c_street_2, Address::MIN_STREET, Address::MAX_STREET);
+    random_->astring(customer->c_city, Address::MIN_CITY, Address::MAX_CITY);
+    random_->astring(customer->c_state, Address::STATE, Address::STATE);
     makeZip(random_, customer->c_zip);
     random_->nstring(customer->c_phone, Customer::PHONE, Customer::PHONE);
     strcpy(customer->c_since, now_);

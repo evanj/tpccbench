@@ -6,6 +6,21 @@
 #include <cstring>
 #include <vector>
 
+// Just a container for constants
+struct Address {
+    // TODO: Embed this structure in warehouse, district, customer? This would reduce some
+    // duplication, but would also change the field names
+    static const int MIN_STREET = 10;
+    static const int MAX_STREET = 20;
+    static const int MIN_CITY = 10;
+    static const int MAX_CITY = 20;
+    static const int STATE = 2;
+    static const int ZIP = 9;
+
+private:
+    Address();
+};
+
 struct Item {
     static const int MIN_IM = 1;
     static const int MAX_IM = 10000;
@@ -30,12 +45,6 @@ struct Warehouse {
     static const float INITIAL_YTD = 300000.00f;
     static const int MIN_NAME = 6;
     static const int MAX_NAME = 10;
-    static const int MIN_STREET = 10;
-    static const int MAX_STREET = 20;
-    static const int MIN_CITY = 10;
-    static const int MAX_CITY = 20;
-    static const int STATE = 2;
-    static const int ZIP = 9;
     // TPC-C 1.3.1 (page 11) requires 2*W. This permits testing up to 50 warehouses. This is an
     // arbitrary limit created to pack ids into integers.
     static const int MAX_WAREHOUSE_ID = 100;
@@ -44,11 +53,11 @@ struct Warehouse {
     float w_tax;
     float w_ytd;
     char w_name[MAX_NAME+1];
-    char w_street_1[MAX_STREET+1];
-    char w_street_2[MAX_STREET+1];
-    char w_city[MAX_CITY+1];
-    char w_state[STATE+1];
-    char w_zip[ZIP+1];
+    char w_street_1[Address::MAX_STREET+1];
+    char w_street_2[Address::MAX_STREET+1];
+    char w_city[Address::MAX_CITY+1];
+    char w_state[Address::STATE+1];
+    char w_zip[Address::ZIP+1];
 };
 
 struct District {
@@ -58,12 +67,6 @@ struct District {
     static const int INITIAL_NEXT_O_ID = 3001;
     static const int MIN_NAME = 6;
     static const int MAX_NAME = 10;
-    static const int MIN_STREET = 10;
-    static const int MAX_STREET = 20;
-    static const int MIN_CITY = 10;
-    static const int MAX_CITY = 20;
-    static const int STATE = 2;
-    static const int ZIP = 9;
     static const int NUM_PER_WAREHOUSE = 10;
 
     int32_t d_id;
@@ -72,11 +75,11 @@ struct District {
     float d_ytd;
     int32_t d_next_o_id;
     char d_name[MAX_NAME+1];
-    char d_street_1[MAX_STREET+1];
-    char d_street_2[MAX_STREET+1];
-    char d_city[MAX_CITY+1];
-    char d_state[STATE+1];
-    char d_zip[ZIP+1];
+    char d_street_1[Address::MAX_STREET+1];
+    char d_street_2[Address::MAX_STREET+1];
+    char d_city[Address::MAX_CITY+1];
+    char d_state[Address::STATE+1];
+    char d_zip[Address::ZIP+1];
 };
 
 struct Stock {
@@ -113,12 +116,6 @@ struct Customer {
     static const int MAX_FIRST = 10;
     static const int MIDDLE = 2;
     static const int MAX_LAST = 16;
-    static const int MIN_STREET = 10;
-    static const int MAX_STREET = 20;
-    static const int MIN_CITY = 10;
-    static const int MAX_CITY = 20;
-    static const int STATE = 2;
-    static const int ZIP = 9;
     static const int PHONE = 16;
     static const int CREDIT = 2;
     static const int MIN_DATA = 300;
@@ -139,11 +136,11 @@ struct Customer {
     char c_first[MAX_FIRST+1];
     char c_middle[MIDDLE+1];
     char c_last[MAX_LAST+1];
-    char c_street_1[MAX_STREET+1];
-    char c_street_2[MAX_STREET+1];
-    char c_city[MAX_CITY+1];
-    char c_state[STATE+1];
-    char c_zip[ZIP+1];
+    char c_street_1[Address::MAX_STREET+1];
+    char c_street_2[Address::MAX_STREET+1];
+    char c_city[Address::MAX_CITY+1];
+    char c_state[Address::STATE+1];
+    char c_zip[Address::ZIP+1];
     char c_phone[PHONE+1];
     char c_since[DATETIME_SIZE+1];
     char c_credit[CREDIT+1];

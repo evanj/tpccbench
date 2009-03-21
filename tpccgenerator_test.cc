@@ -75,12 +75,12 @@ TEST_F(TPCCGeneratorTest, GenerateWarehouseMin) {
     EXPECT_EQ(Warehouse::MIN_TAX, warehouse_.w_tax);
     EXPECT_EQ(Warehouse::INITIAL_YTD, warehouse_.w_ytd);
     EXPECT_EQ(Warehouse::MIN_NAME, strlen(warehouse_.w_name));
-    EXPECT_EQ(Warehouse::MIN_STREET, strlen(warehouse_.w_street_1));
-    EXPECT_EQ(Warehouse::MIN_STREET, strlen(warehouse_.w_street_2));
-    EXPECT_EQ(Warehouse::MIN_CITY, strlen(warehouse_.w_city));
-    EXPECT_EQ(Warehouse::STATE, strlen(warehouse_.w_state));
-    EXPECT_EQ(Warehouse::ZIP, strlen(warehouse_.w_zip));
-    EXPECT_EQ(0, memcmp(warehouse_.w_zip + Warehouse::ZIP - 5, "11111", 5));
+    EXPECT_EQ(Address::MIN_STREET, strlen(warehouse_.w_street_1));
+    EXPECT_EQ(Address::MIN_STREET, strlen(warehouse_.w_street_2));
+    EXPECT_EQ(Address::MIN_CITY, strlen(warehouse_.w_city));
+    EXPECT_EQ(Address::STATE, strlen(warehouse_.w_state));
+    EXPECT_EQ(Address::ZIP, strlen(warehouse_.w_zip));
+    EXPECT_EQ(0, memcmp(warehouse_.w_zip + Address::ZIP - 5, "11111", 5));
 }
 
 TEST_F(TPCCGeneratorTest, GenerateWarehouseMax) {
@@ -90,12 +90,12 @@ TEST_F(TPCCGeneratorTest, GenerateWarehouseMax) {
     EXPECT_EQ(Warehouse::MAX_TAX, warehouse_.w_tax);
     EXPECT_EQ(Warehouse::INITIAL_YTD, warehouse_.w_ytd);
     EXPECT_EQ(Warehouse::MAX_NAME, strlen(warehouse_.w_name));
-    EXPECT_EQ(Warehouse::MAX_STREET, strlen(warehouse_.w_street_1));
-    EXPECT_EQ(Warehouse::MAX_STREET, strlen(warehouse_.w_street_2));
-    EXPECT_EQ(Warehouse::MAX_CITY, strlen(warehouse_.w_city));
-    EXPECT_EQ(Warehouse::STATE, strlen(warehouse_.w_state));
-    EXPECT_EQ(Warehouse::ZIP, strlen(warehouse_.w_zip));
-    EXPECT_EQ(0, memcmp(warehouse_.w_zip + Warehouse::ZIP - 5, "11111", 5));
+    EXPECT_EQ(Address::MAX_STREET, strlen(warehouse_.w_street_1));
+    EXPECT_EQ(Address::MAX_STREET, strlen(warehouse_.w_street_2));
+    EXPECT_EQ(Address::MAX_CITY, strlen(warehouse_.w_city));
+    EXPECT_EQ(Address::STATE, strlen(warehouse_.w_state));
+    EXPECT_EQ(Address::ZIP, strlen(warehouse_.w_zip));
+    EXPECT_EQ(0, memcmp(warehouse_.w_zip + Address::ZIP - 5, "11111", 5));
 }
 
 TEST_F(TPCCGeneratorTest, GenerateStock) {
@@ -128,20 +128,20 @@ TEST_F(TPCCGeneratorTest, GenerateDistrict) {
     EXPECT_EQ(District::INITIAL_YTD, district.d_ytd);
     EXPECT_EQ(District::INITIAL_NEXT_O_ID, district.d_next_o_id);
     EXPECT_EQ(District::MIN_NAME, strlen(district.d_name));
-    EXPECT_EQ(District::MIN_STREET, strlen(district.d_street_1));
-    EXPECT_EQ(District::MIN_STREET, strlen(district.d_street_2));
-    EXPECT_EQ(District::MIN_CITY, strlen(district.d_city));
-    EXPECT_EQ(District::STATE, strlen(district.d_state));
-    EXPECT_EQ(District::ZIP, strlen(district.d_zip));
-    EXPECT_EQ(0, memcmp(district.d_zip + District::ZIP - 5, "11111", 5));
+    EXPECT_EQ(Address::MIN_STREET, strlen(district.d_street_1));
+    EXPECT_EQ(Address::MIN_STREET, strlen(district.d_street_2));
+    EXPECT_EQ(Address::MIN_CITY, strlen(district.d_city));
+    EXPECT_EQ(Address::STATE, strlen(district.d_state));
+    EXPECT_EQ(Address::ZIP, strlen(district.d_zip));
+    EXPECT_EQ(0, memcmp(district.d_zip + Address::ZIP - 5, "11111", 5));
 
     random_->minimum_ = false;
     generator_.generateDistrict(9, 97, &district);
     EXPECT_EQ(District::MAX_TAX, district.d_tax);
     EXPECT_EQ(District::MAX_NAME, strlen(district.d_name));
-    EXPECT_EQ(District::MAX_STREET, strlen(district.d_street_1));
-    EXPECT_EQ(District::MAX_STREET, strlen(district.d_street_2));
-    EXPECT_EQ(District::MAX_CITY, strlen(district.d_city));
+    EXPECT_EQ(Address::MAX_STREET, strlen(district.d_street_1));
+    EXPECT_EQ(Address::MAX_STREET, strlen(district.d_street_2));
+    EXPECT_EQ(Address::MAX_CITY, strlen(district.d_city));
 }
 
 TEST_F(TPCCGeneratorTest, GenerateSmallDistrict) {
@@ -167,12 +167,12 @@ TEST_F(TPCCGeneratorTest, GenerateCustomer) {
     EXPECT_EQ(Customer::MIN_FIRST, strlen(customer.c_first));
     EXPECT_EQ(0, strcmp("OE", customer.c_middle));
     EXPECT_EQ(0, strcmp("BARPRESABLE", customer.c_last));
-    EXPECT_EQ(Customer::MIN_STREET, strlen(customer.c_street_1));
-    EXPECT_EQ(Customer::MIN_STREET, strlen(customer.c_street_2));
-    EXPECT_EQ(Customer::MIN_CITY, strlen(customer.c_city));
-    EXPECT_EQ(Customer::STATE, strlen(customer.c_state));
-    EXPECT_EQ(Customer::ZIP, strlen(customer.c_zip));
-    EXPECT_EQ(0, memcmp(customer.c_zip + Customer::ZIP - 5, "11111", 5));
+    EXPECT_EQ(Address::MIN_STREET, strlen(customer.c_street_1));
+    EXPECT_EQ(Address::MIN_STREET, strlen(customer.c_street_2));
+    EXPECT_EQ(Address::MIN_CITY, strlen(customer.c_city));
+    EXPECT_EQ(Address::STATE, strlen(customer.c_state));
+    EXPECT_EQ(Address::ZIP, strlen(customer.c_zip));
+    EXPECT_EQ(0, memcmp(customer.c_zip + Address::ZIP - 5, "11111", 5));
     EXPECT_EQ(Customer::PHONE, strlen(customer.c_phone));
     EXPECT_EQ(0, strcmp(NOW, customer.c_since));
     EXPECT_EQ(0, strcmp(Customer::GOOD_CREDIT, customer.c_credit));
@@ -184,9 +184,9 @@ TEST_F(TPCCGeneratorTest, GenerateCustomer) {
     EXPECT_EQ(Customer::MAX_FIRST, strlen(customer.c_first));
     // NURand(255, 0, 999) with C = 0 -> 23
     EXPECT_EQ(0, strcmp("BARABLEPRI", customer.c_last));
-    EXPECT_EQ(Customer::MAX_STREET, strlen(customer.c_street_1));
-    EXPECT_EQ(Customer::MAX_STREET, strlen(customer.c_street_2));
-    EXPECT_EQ(Customer::MAX_CITY, strlen(customer.c_city));
+    EXPECT_EQ(Address::MAX_STREET, strlen(customer.c_street_1));
+    EXPECT_EQ(Address::MAX_STREET, strlen(customer.c_street_2));
+    EXPECT_EQ(Address::MAX_CITY, strlen(customer.c_city));
     EXPECT_EQ(0, strcmp(Customer::BAD_CREDIT, customer.c_credit));
     EXPECT_EQ(Customer::MAX_DATA, strlen(customer.c_data));
 }
