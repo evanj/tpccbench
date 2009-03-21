@@ -6,13 +6,16 @@
 
 #include "tpccdb.h"
 
+namespace tpcc {
 class RandomGenerator;
+}
+
 class TPCCTables;
 
 class TPCCGenerator {
 public:
     // Owns generator
-    TPCCGenerator(RandomGenerator* random, const char* now, int num_items,
+    TPCCGenerator(tpcc::RandomGenerator* random, const char* now, int num_items,
             int districts_per_warehouse, int customers_per_district, int new_orders_per_district);
 
     ~TPCCGenerator();
@@ -47,7 +50,7 @@ public:
     void makeWarehouse(TPCCTables* tables, int32_t w_id);
 
 private:
-    RandomGenerator* random_;
+    tpcc::RandomGenerator* random_;
     char now_[DATETIME_SIZE+1];
 
     int num_items_;

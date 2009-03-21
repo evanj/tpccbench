@@ -8,6 +8,8 @@
 
 #include "assert.h"
 
+namespace tpcc {
+
 NURandC NURandC::makeRandom(RandomGenerator* generator) {
     NURandC c;
     c.c_last_ = generator->number(0, 255);
@@ -176,3 +178,5 @@ void RealRandomGenerator::seed(unsigned int seed) {
     memcpy(state, &seed, std::min(sizeof(seed), sizeof(state)));
 #endif
 }
+
+}  // namespace tpcc

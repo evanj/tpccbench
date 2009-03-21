@@ -1,11 +1,13 @@
 #ifndef TPCCCLIENT_H__
 #define TPCCCLIENT_H__
 
-//~ #include <cstdint>
 #include <stdint.h>
 
-class Clock;
+namespace tpcc {
 class RandomGenerator;
+}
+
+class Clock;
 class TPCCDB;
 
 // Generates transactions according to the TPC-C specification. This ignores the fact that
@@ -14,7 +16,7 @@ class TPCCDB;
 class TPCCClient {
 public:
     // Owns clock, generator and db.
-    TPCCClient(Clock* clock, RandomGenerator* generator, TPCCDB* db, int num_items,
+    TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* db, int num_items,
             int num_warehouses, int districts_per_warehouse, int customers_per_district);
     ~TPCCClient();
 
@@ -40,7 +42,7 @@ private:
     int32_t generateItemID();
 
     Clock* clock_;
-    RandomGenerator* generator_;
+    tpcc::RandomGenerator* generator_;
     TPCCDB* db_;
     int num_items_;
     int num_warehouses_;

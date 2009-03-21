@@ -3,6 +3,8 @@
 #include "randomgenerator.h"
 #include "stupidunit.h"
 
+namespace tpcc {
+
 TEST(MakeLastName, BadNum) {
     char name[MAX_LAST_NAME+1];
     EXPECT_DEATH(makeLastName(-1, name));
@@ -67,6 +69,8 @@ TEST_F(RandomGeneratorTest, LastNameLimited) {
     generator_.lastName(name, 100);
     EXPECT_EQ(0, strcmp("BARESEESE", name));
 }
+
+}  // namespace tpcc
 
 int main() {
     return TestSuite::globalInstance()->runAll();

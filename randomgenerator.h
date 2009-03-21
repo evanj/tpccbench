@@ -7,6 +7,8 @@
 #define HAVE_RANDOM_R
 #endif
 
+namespace tpcc {
+
 class RandomGenerator;
 
 // Constant C values for the NURand function.
@@ -98,5 +100,7 @@ private:
     unsigned short state[3];
 #endif
 };
+
+}  // namespace tpcc
 
 #endif

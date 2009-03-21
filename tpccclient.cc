@@ -15,7 +15,7 @@ using std::vector;
 const float TPCCClient::MIN_PAYMENT_AMOUNT;
 const float TPCCClient::MAX_PAYMENT_AMOUNT;
 
-TPCCClient::TPCCClient(Clock* clock, RandomGenerator* generator, TPCCDB* db, int num_items,
+TPCCClient::TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* db, int num_items,
         int num_warehouses, int districts_per_warehouse, int customers_per_district) :
         clock_(clock),
         generator_(generator),

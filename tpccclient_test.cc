@@ -3,10 +3,11 @@
 #include <string>
 
 #include "clock.h"
+#include "mocktpccdb.h"
 #include "randomgenerator.h"
+#include "stupidunit.h"
 #include "tpccclient.h"
 #include "tpccdb.h"
-#include "stupidunit.h"
 
 using std::string;
 using std::vector;
@@ -23,90 +24,11 @@ public:
 };
 const char MockClock::NOW[DATETIME_SIZE+1] = "20080718083852";
 
-class MockTPCCDB : public TPCCDB {
-public:
-    virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        stock_level_threshold_ = threshold;
-        return 0;
-    }
-
-    virtual void orderStatus(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-            OrderStatusOutput* output) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        order_status_c_id_ = customer_id;
-    }
-
-    virtual void orderStatus(int32_t warehouse_id, int32_t district_id, const char* c_last,
-            OrderStatusOutput* output) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        c_last_ = c_last;
-    }
-
-    virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-            const vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        c_id_ = customer_id;
-        items_ = items;
-        now_ = now;
-        return true;
-    }
-
-    virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-            PaymentOutput* output) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        c_w_id_ = c_warehouse_id;
-        c_d_id_ = c_district_id;
-        c_id_ = customer_id;
-        h_amount_ = h_amount;
-        now_ = now;
-    }
-
-    virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-            PaymentOutput* output) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        c_w_id_ = c_warehouse_id;
-        c_d_id_ = c_district_id;
-        c_last_ = c_last;
-        h_amount_ = h_amount;
-        now_ = now;
-    }
-
-    virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-            vector<DeliveryOrderInfo>* orders) {
-        w_id_ = warehouse_id;
-        delivery_carrier_id_ = carrier_id;
-        now_ = now;
-    }
-
-    int32_t w_id_;
-    int32_t d_id_;
-    int32_t stock_level_threshold_;
-    int32_t order_status_c_id_;
-    string c_last_;
-    int32_t delivery_carrier_id_;
-    string now_;
-    int32_t c_w_id_;
-    int32_t c_d_id_;
-    int32_t c_id_;
-    float h_amount_;
-    vector<NewOrderItem> items_;
-};
-
 class TPCCClientTest : public Test {
 public:
     TPCCClientTest() :
-            generator_(new MockRandomGenerator()),
-            db_(new MockTPCCDB()),
+            generator_(new tpcc::MockRandomGenerator()),
+            db_(new tpcc::MockTPCCDB()),
             client_(new MockClock(), generator_, db_, Item::NUM_ITEMS, WAREHOUSES,
                     District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT) {}
 
@@ -118,17 +40,17 @@ protected:
     static const int SMALL_CUSTOMERS = 20;
 
     TPCCClient* makeSmallClient() {
-        generator_ = new MockRandomGenerator();
-        db_ = new MockTPCCDB();
+        generator_ = new tpcc::MockRandomGenerator();
+        db_ = new tpcc::MockTPCCDB();
         return new TPCCClient(new MockClock(), generator_, db_, SMALL_ITEMS, 1, SMALL_DISTRICTS,
                 SMALL_CUSTOMERS);
     }
 
-    MockRandomGenerator* generator_;
-    MockTPCCDB* db_;
+    tpcc::MockRandomGenerator* generator_;
+    tpcc::MockTPCCDB* db_;
     TPCCClient client_;
 
-    NURandC c_;
+    tpcc::NURandC c_;
 };
 
 TEST_F(TPCCClientTest, DoStockLevel) {

@@ -10,14 +10,14 @@ static const char NOW[] = "20080708012243";
 class TPCCGeneratorTest : public Test {
 public:
     TPCCGeneratorTest() :
-            random_(new MockRandomGenerator()),
+            random_(new tpcc::MockRandomGenerator()),
             generator_(random_, NOW, Item::NUM_ITEMS, District::NUM_PER_WAREHOUSE,
                     Customer::NUM_PER_DISTRICT, NewOrder::INITIAL_NUM_PER_DISTRICT) {}
 
 protected:
     Item item_;
     Warehouse warehouse_;
-    MockRandomGenerator* random_;
+    tpcc::MockRandomGenerator* random_;
     TPCCTables tables_;
 
     TPCCGenerator generator_;
@@ -53,7 +53,7 @@ TEST_F(TPCCGeneratorTest, GenerateItemMax) {
 }
 
 TEST_F(TPCCGeneratorTest, MakeItemsTable) {
-    TPCCGenerator small(new MockRandomGenerator(), NOW, 10, District::NUM_PER_WAREHOUSE,
+    TPCCGenerator small(new tpcc::MockRandomGenerator(), NOW, 10, District::NUM_PER_WAREHOUSE,
             Customer::NUM_PER_DISTRICT, NewOrder::INITIAL_NUM_PER_DISTRICT);
     small.makeItemsTable(&tables_);
 
@@ -145,7 +145,7 @@ TEST_F(TPCCGeneratorTest, GenerateDistrict) {
 }
 
 TEST_F(TPCCGeneratorTest, GenerateSmallDistrict) {
-    TPCCGenerator small(new MockRandomGenerator(), NOW, 50, 5, 10, 2);
+    TPCCGenerator small(new tpcc::MockRandomGenerator(), NOW, 50, 5, 10, 2);
 
     District district;
     small.generateDistrict(5, 97, &district);
@@ -255,7 +255,7 @@ TEST_F(TPCCGeneratorTest, GenerateHistory) {
 }
 
 TEST_F(TPCCGeneratorTest, MakeWarehouse) {
-    TPCCGenerator small(new MockRandomGenerator(), NOW, 10, 5, 10, 2);
+    TPCCGenerator small(new tpcc::MockRandomGenerator(), NOW, 10, 5, 10, 2);
     small.makeWarehouse(&tables_, 42);
     Warehouse* w = tables_.findWarehouse(42);
     EXPECT_EQ(42, w->w_id);

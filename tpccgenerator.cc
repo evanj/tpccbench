@@ -7,7 +7,7 @@
 
 using std::set;
 
-TPCCGenerator::TPCCGenerator(RandomGenerator* random, const char* now, int num_items,
+TPCCGenerator::TPCCGenerator(tpcc::RandomGenerator* random, const char* now, int num_items,
         int districts_per_warehouse, int customers_per_district, int new_orders_per_district) :
         random_(random),
         num_items_(num_items),
@@ -31,7 +31,7 @@ TPCCGenerator::~TPCCGenerator() {
     delete random_;
 }
 
-static void setOriginal(RandomGenerator* random, char* s) {
+static void setOriginal(tpcc::RandomGenerator* random, char* s) {
     int length = static_cast<int>(strlen(s));
     int position = random->number(0, length-8);
     memcpy(s + position, "ORIGINAL", 8);
@@ -50,7 +50,7 @@ void TPCCGenerator::generateItem(int32_t id, bool original, Item* item) {
     }
 }
 
-static set<int> selectUniqueIds(RandomGenerator* random, int num_unique, int lower_id,
+static set<int> selectUniqueIds(tpcc::RandomGenerator* random, int num_unique, int lower_id,
         int upper_id) {
     set<int> rows;
     for (int i = 0; i < num_unique; ++i) {
@@ -79,13 +79,13 @@ void TPCCGenerator::makeItemsTable(TPCCTables* tables) {
     }
 }
 
-static float makeTax(RandomGenerator* random) {
+static float makeTax(tpcc::RandomGenerator* random) {
     assert(Warehouse::MIN_TAX == District::MIN_TAX);
     assert(Warehouse::MAX_TAX == District::MAX_TAX);
     return random->fixedPoint(4, Warehouse::MIN_TAX, Warehouse::MAX_TAX);
 }
 
-static void makeZip(RandomGenerator* random, char* zip) {
+static void makeZip(tpcc::RandomGenerator* random, char* zip) {
     random->nstring(zip, 4, 4);
     memcpy(zip+4, "11111", 6);
 }
@@ -152,7 +152,7 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id, boo
     strcpy(customer->c_middle, "OE");
 
     if (id <= 1000) {
-        makeLastName(id-1, customer->c_last);
+        tpcc::makeLastName(id-1, customer->c_last);
     } else {
         random_->lastName(customer->c_last, customers_per_district_);
     }
