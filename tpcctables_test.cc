@@ -51,7 +51,7 @@ static const char ITEM_DATA[] = "ORIGINAL9012345678901234";
 static const char STOCK_DIST[] = "12345678901234";
 static const char W_NAME[] = "wname";
 static const char D_NAME[] = "dname";
-
+static const char STREET[Address::MAX_STREET+1] = "maxstreet01234567890";
 
 class TPCCTablesTest : public Test {
 protected:
@@ -122,6 +122,7 @@ protected:
         strcpy(customer.c_middle, CUSTOMER_MIDDLE);
         strcpy(customer.c_last, c_last);
         strcpy(customer.c_credit, Customer::BAD_CREDIT);
+        strcpy(customer.c_street_2, STREET);
         customer.c_data[0] = '\0';
         tables_.insertCustomer(customer);
     }
@@ -144,6 +145,7 @@ protected:
         warehouse.w_tax = W_TAX;
         warehouse.w_ytd = 0;
         strcpy(warehouse.w_name, W_NAME);
+        strcpy(warehouse.w_street_1, STREET);
         tables_.insertWarehouse(warehouse);
     }
 
@@ -568,18 +570,18 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     PaymentOutput output;
     tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
 
-    EXPECT_EQ(W_ID, output.warehouse.w_id);
-    EXPECT_EQ(123.45f, output.warehouse.w_ytd);
-    EXPECT_EQ(D_ID, output.district.d_id);
-    EXPECT_EQ(123.45f, output.district.d_ytd);
-    EXPECT_EQ(W_ID-1, output.customer.c_w_id);
-    EXPECT_EQ(D_ID-1, output.customer.c_d_id);
-    EXPECT_EQ(C_ID, output.customer.c_id);
-    EXPECT_EQ(CUSTOMER_BALANCE-123.45f, output.customer.c_balance);
-    EXPECT_EQ(123.45f, output.customer.c_ytd_payment);
-    EXPECT_EQ(1, output.customer.c_payment_cnt);
-    EXPECT_EQ(0, strcmp(Customer::BAD_CREDIT, output.customer.c_credit));
-    EXPECT_EQ(0, strcmp("(3, 1, 99, 2, 100, 123.45)\n", output.customer.c_data));
+    // Verify that YTD has been incremented
+    EXPECT_EQ(123.45f, tables_.findWarehouse(W_ID)->w_ytd);
+    EXPECT_EQ(123.45f, tables_.findDistrict(W_ID, D_ID)->d_ytd);
+
+    EXPECT_EQ(0, strcmp(STREET, output.w_street_1));
+    EXPECT_EQ(0, strcmp(STREET, output.c_street_2));
+    EXPECT_EQ(CUSTOMER_BALANCE-123.45f, output.c_balance);
+    EXPECT_EQ(CUSTOMER_BALANCE-123.45f, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_balance);
+    EXPECT_EQ(123.45f, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_ytd_payment);
+    EXPECT_EQ(1, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_payment_cnt);
+    EXPECT_EQ(0, strcmp(Customer::BAD_CREDIT, output.c_credit));
+    EXPECT_EQ(0, strcmp("(3, 1, 99, 2, 100, 123.45)\n", output.c_data));
 
     // Check the history table
     ASSERT_EQ(1, tables_.history().size());
@@ -596,7 +598,7 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     // Another payment: check that it does the insert correctly
     tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
     EXPECT_EQ(0, strcmp("(3, 1, 99, 2, 100, 123.45)\n(3, 1, 99, 2, 100, 123.45)\n",
-            output.customer.c_data));
+            output.c_data));
     EXPECT_EQ(2, tables_.history().size());
 
     // Fill c_data to verify that truncation works correctly
@@ -608,7 +610,7 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     memset(match+length, 'a', Customer::MAX_DATA-length);
     match[Customer::MAX_DATA] = '\0';
     tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
-    EXPECT_EQ(0, strcmp(match, output.customer.c_data));
+    EXPECT_EQ(0, strcmp(match, output.c_data));
     EXPECT_EQ(3, tables_.history().size());
 }
 
@@ -621,7 +623,7 @@ TEST_F(TPCCTablesTest, PaymentGoodCredit) {
 
     PaymentOutput output;
     tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
-    EXPECT_EQ(0, strlen(output.customer.c_data));
+    EXPECT_EQ(0, strlen(output.c_data));
 }
 
 TEST_F(TPCCTablesTest, PaymentByName) {
@@ -631,7 +633,7 @@ TEST_F(TPCCTablesTest, PaymentByName) {
 
     PaymentOutput output;
     tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, CUSTOMER_LAST, 123.45f, NOW, &output);
-    EXPECT_EQ(C_ID, output.customer.c_id);
+    EXPECT_EQ(output.c_balance, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_balance);
 }
 
 TEST_F(TPCCTablesTest, DeliveryNoOrders) {

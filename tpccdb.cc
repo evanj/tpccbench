@@ -1,5 +1,16 @@
 #include "tpccdb.h"
 
+void Address::copy(char* street1, char* street2, char* city, char* state, char* zip,
+        const char* src_street1, const char* src_street2, const char* src_city,
+        const char* src_state, const char* src_zip) {
+    // TODO: Just do one copy since all the fields should be contiguous?
+    memcpy(street1, src_street1, MAX_STREET+1);
+    memcpy(street2, src_street2, MAX_STREET+1);
+    memcpy(city, src_city, MAX_CITY+1);
+    memcpy(state, src_state, STATE+1);
+    memcpy(zip, src_zip, ZIP+1);
+}
+
 // Non-integral constants must be defined in a .cc file. Needed for Mac OS X.
 // http://www.research.att.com/~bs/bs_faq2.html#in-class
 const float Item::MIN_PRICE;

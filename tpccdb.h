@@ -17,6 +17,10 @@ struct Address {
     static const int STATE = 2;
     static const int ZIP = 9;
 
+    static void copy(char* street1, char* street2, char* city, char* state, char* zip,
+            const char* src_street1, const char* src_street2, const char* src_city,
+            const char* src_state, const char* src_zip);
+
 private:
     Address();
 };
@@ -290,11 +294,34 @@ struct NewOrderOutput {
 };
 
 struct PaymentOutput {
-    // Return entire tuples since Payment requires most of the data. This returns more than
-    // necessary, but is easy.
-    Warehouse warehouse;
-    District district;
-    Customer customer;
+    // TPC-C 2.5.3.4 specifies these output fields
+    char w_street_1[Address::MAX_STREET+1];
+    char w_street_2[Address::MAX_STREET+1];
+    char w_city[Address::MAX_CITY+1];
+    char w_state[Address::STATE+1];
+    char w_zip[Address::ZIP+1];
+
+    char d_street_1[Address::MAX_STREET+1];
+    char d_street_2[Address::MAX_STREET+1];
+    char d_city[Address::MAX_CITY+1];
+    char d_state[Address::STATE+1];
+    char d_zip[Address::ZIP+1];
+
+    float c_credit_lim;
+    float c_discount;
+    float c_balance;
+    char c_first[Customer::MAX_FIRST+1];
+    char c_middle[Customer::MIDDLE+1];
+    char c_last[Customer::MAX_LAST+1];
+    char c_street_1[Address::MAX_STREET+1];
+    char c_street_2[Address::MAX_STREET+1];
+    char c_city[Address::MAX_CITY+1];
+    char c_state[Address::STATE+1];
+    char c_zip[Address::ZIP+1];
+    char c_phone[Customer::PHONE+1];
+    char c_since[DATETIME_SIZE+1];
+    char c_credit[Customer::CREDIT+1];
+    char c_data[Customer::MAX_DATA+1];
 };
 
 struct DeliveryOrderInfo {

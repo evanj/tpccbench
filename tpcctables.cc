@@ -273,15 +273,22 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_wa
     internalPayment(warehouse_id, district_id, customer, h_amount, now, output);
 }
 
+#define COPY_ADDRESS(src, dest, prefix) \
+    Address::copy( \
+            dest->prefix ## street_1, dest->prefix ## street_2, dest->prefix ## city, \
+            dest->prefix ## state, dest->prefix ## zip,\
+            src->prefix ## street_1, src->prefix ## street_2, src->prefix ## city, \
+            src->prefix ## state, src->prefix ## zip)
+
 void TPCCTables::internalPayment(int32_t warehouse_id, int32_t district_id, Customer* c,
         float h_amount, const char* now, PaymentOutput* output) {
     Warehouse* w = findWarehouse(warehouse_id);
     w->w_ytd += h_amount;
-    output->warehouse = *w;
+    COPY_ADDRESS(w, output, w_);
 
     District* d = findDistrict(warehouse_id, district_id);
     d->d_ytd += h_amount;
-    output->district = *d;
+    COPY_ADDRESS(d, output, d_);
 
     c->c_balance -= h_amount;
     c->c_ytd_payment += h_amount;
@@ -305,7 +312,22 @@ void TPCCTables::internalPayment(int32_t warehouse_id, int32_t district_id, Cust
         c->c_data[characters + current_keep] = '\0';
         assert(strlen(c->c_data) == characters + current_keep);
     }
-    output->customer = *c;
+
+    output->c_credit_lim = c->c_credit_lim;
+    output->c_discount = c->c_discount;
+    output->c_balance = c->c_balance;
+#define COPY_STRING(dest, src, field) memcpy(dest->field, src->field, sizeof(src->field))
+    COPY_STRING(output, c, c_first);
+    COPY_STRING(output, c, c_middle);
+    COPY_STRING(output, c, c_last);
+    //~ printf("copying address %s %s %s %s %s\n", c->c_street_1, c->c_street_2, c->c_city, c->c_state, c->c_zip);
+    COPY_ADDRESS(c, output, c_);
+    //~ printf("dest address %s %s %s %s %s\n", output->c_street_1, output->c_street_2, output->c_city, output->c_state, output->c_zip);
+    COPY_STRING(output, c, c_phone);
+    COPY_STRING(output, c, c_since);
+    COPY_STRING(output, c, c_credit);
+    COPY_STRING(output, c, c_data);
+#undef COPY_STRING
 
     // Insert the line into the history table
     History h;
@@ -321,6 +343,8 @@ void TPCCTables::internalPayment(int32_t warehouse_id, int32_t district_id, Cust
     strcat(h.h_data, d->d_name);
     insertHistory(h);
 }
+
+#undef COPY_ADDRESS
 
 // forward declaration for delivery
 static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id);
