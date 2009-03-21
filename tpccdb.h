@@ -234,7 +234,7 @@ struct History {
     int32_t h_w_id;
     float h_amount;
     char h_date[DATETIME_SIZE+1];
-    char h_data[MAX_DATA];
+    char h_data[MAX_DATA+1];
 };
 
 // Data returned by the "order status" transaction.
