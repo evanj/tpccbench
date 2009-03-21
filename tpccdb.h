@@ -5,8 +5,24 @@
 
 #include <cstring>
 #include <tr1/unordered_map>
-#include <tr1/unordered_set>
 #include <vector>
+
+// Avoid std::tr1::unordered_set on Mac OS X, which has compile errors
+#ifdef __APPLE__
+#include <ext/hash_set>
+#else
+#include <tr1/unordered_set>
+#endif
+
+namespace tpcc {
+#ifdef __APPLE__
+template <typename T>
+class Set : public __gnu_cxx::hash_set<T, std::tr1::hash<T> > {};
+#else
+template <typename T>
+class Set : public std::tr1::unordered_set<T> {};
+#endif
+}
 
 // Just a container for constants
 struct Address {
@@ -373,18 +389,18 @@ public:
     typedef std::tr1::unordered_map<OrderLine*, OrderLine*> OrderLineMap;
     const OrderLineMap& modified_order_lines() const { return modified_order_lines_; }
 
-    typedef std::tr1::unordered_set<const Order*> OrderSet;
+    typedef tpcc::Set<const Order*> OrderSet;
     const OrderSet& inserted_orders() const { return inserted_orders_; }
 
-    typedef std::tr1::unordered_set<const OrderLine*> OrderLineSet;
+    typedef tpcc::Set<const OrderLine*> OrderLineSet;
     const OrderLineSet& inserted_order_lines() const { return inserted_order_lines_; }
 
-    typedef std::tr1::unordered_set<const NewOrder*> NewOrderSet;
+    typedef tpcc::Set<const NewOrder*> NewOrderSet;
     const NewOrderSet& inserted_new_orders() const { return inserted_new_orders_; }
-    typedef std::tr1::unordered_set<NewOrder*> NewOrderDeletedSet;
+    typedef tpcc::Set<NewOrder*> NewOrderDeletedSet;
     const NewOrderDeletedSet& deleted_new_orders() const { return deleted_new_orders_; }
 
-    typedef std::tr1::unordered_set<const History*> HistorySet;
+    typedef tpcc::Set<const History*> HistorySet;
     const HistorySet& inserted_history() const { return inserted_history_; }
 
 private:
@@ -450,7 +466,7 @@ public:
             const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities,
             TPCCUndo** undo) = 0;
 
-    typedef std::tr1::unordered_set<int32_t> WarehouseSet;
+    typedef tpcc::Set<int32_t> WarehouseSet;
     static WarehouseSet newOrderRemoteWarehouses(int32_t home_warehouse,
             const std::vector<NewOrderItem>& items);
 

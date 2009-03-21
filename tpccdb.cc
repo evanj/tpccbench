@@ -1,7 +1,8 @@
+#include "tpccdb.h"
+
 #include <cassert>
 
 #include "stlutil.h"
-#include "tpccdb.h"
 
 void Address::copy(char* street1, char* street2, char* city, char* state, char* zip,
         const char* src_street1, const char* src_street2, const char* src_city,
