@@ -24,7 +24,9 @@ TPCCClient::TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* d
         num_warehouses_(num_warehouses),
         districts_per_warehouse_(districts_per_warehouse),
         customers_per_district_(customers_per_district),
-        remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS) {
+        remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS),
+        bound_warehouse_(0),
+        bound_district_(0) {
     ASSERT(clock_ != NULL);
     ASSERT(generator_ != NULL);
     ASSERT(db_ != NULL);
@@ -170,13 +172,29 @@ void TPCCClient::remote_item_milli_p(int remote_item_milli_p) {
     remote_item_milli_p_ = remote_item_milli_p;
 }
 
+void TPCCClient::bindWarehouseDistrict(int warehouse_id, int district_id) {
+    assert(0 <= warehouse_id && warehouse_id <= num_warehouses_);
+    assert(0 <= district_id && district_id <= districts_per_warehouse_);
+    bound_warehouse_ = warehouse_id;
+    bound_district_ = district_id;
+}
+
 int32_t TPCCClient::generateWarehouse() {
-    return generator_->number(1, num_warehouses_);
+    if (bound_warehouse_ == 0) {
+        return generator_->number(1, num_warehouses_);
+    } else {
+        return bound_warehouse_;
+    }
 }
 
 int32_t TPCCClient::generateDistrict() {
-    return generator_->number(1, districts_per_warehouse_);
+    if (bound_district_ == 0) {
+        return generator_->number(1, districts_per_warehouse_);
+    } else {
+        return bound_district_;
+    }
 }
+
 int32_t TPCCClient::generateCID() {
     return generator_->NURand(1023, 1, customers_per_district_);
 }

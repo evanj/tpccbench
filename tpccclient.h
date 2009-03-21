@@ -38,6 +38,9 @@ public:
     // Sets the remote item probability in units of thousandths of probability (10 = p(x) = 0.01)
     void remote_item_milli_p(int remote_item_milli_p);
 
+    // Bind this client to a specific warehouse and district. 0 means any, a value means fixed.
+    void bindWarehouseDistrict(int warehouse, int district);
+
 private:
     int32_t generateWarehouse();
     int32_t generateDistrict();
@@ -53,6 +56,9 @@ private:
     int customers_per_district_;
 
     int remote_item_milli_p_;
+
+    int bound_warehouse_; 
+    int bound_district_; 
 };
 
 #endif

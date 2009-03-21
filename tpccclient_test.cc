@@ -217,6 +217,38 @@ TEST_F(TPCCClientTest, DoNewOrderRemoteP) {
     }
 }
 
+TEST_F(TPCCClientTest, Bind) {
+    EXPECT_DEATH(client_.bindWarehouseDistrict(-1, 0));
+    EXPECT_DEATH(client_.bindWarehouseDistrict(0, -1));
+    EXPECT_DEATH(client_.bindWarehouseDistrict(0, District::NUM_PER_WAREHOUSE + 1));
+    client_.bindWarehouseDistrict(0, 0);
+    client_.bindWarehouseDistrict(0, District::NUM_PER_WAREHOUSE);
+    EXPECT_DEATH(client_.bindWarehouseDistrict(WAREHOUSES+1, 0));
+    client_.bindWarehouseDistrict(WAREHOUSES, 0);
+
+    // fixed warehouse, random district
+    db_->new_order_committed_ = false;
+    client_.doNewOrder();
+    EXPECT_EQ(WAREHOUSES, db_->w_id_);
+    EXPECT_EQ(1, db_->d_id_);
+    db_->new_order_committed_ = true;
+    generator_->minimum_ = false;
+    client_.doNewOrder();
+    EXPECT_EQ(WAREHOUSES, db_->w_id_);
+    EXPECT_EQ(District::NUM_PER_WAREHOUSE, db_->d_id_);
+
+    // fixed warehouse and district
+    client_.bindWarehouseDistrict(2, 5);
+    client_.doNewOrder();
+    EXPECT_EQ(2, db_->w_id_);
+    EXPECT_EQ(5, db_->d_id_);
+    db_->new_order_committed_ = false;
+    generator_->minimum_ = true;
+    client_.doNewOrder();
+    EXPECT_EQ(2, db_->w_id_);
+    EXPECT_EQ(5, db_->d_id_);
+}
+
 int main() {
     return TestSuite::globalInstance()->runAll();
 }

@@ -290,7 +290,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     // TODO: It might be more efficient to merge this into the loop above, but this is simpler.
     vector<int32_t> quantities;
     bool result = newOrderRemote(warehouse_id, warehouse_id, items, &quantities, undo);
-    assert(result);
+    ASSERT(result);
     newOrderCombine(quantities, output);
 
     return true;
@@ -892,7 +892,7 @@ History* TPCCTables::insertHistory(const History& history) {
 void TPCCTables::eraseHistory(const History* history) {
     // Search backwards to find the history: it likely was inserted recently (or last)
     bool found = false;
-    for (int i = history_.size()-1; i >= 0; --i) {
+    for (int i = static_cast<int>(history_.size())-1; i >= 0; --i) {
         if (history == history_[i]) {
             if (i != history_.size() - 1) {
                 // erase not at end: move the last element here
