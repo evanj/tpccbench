@@ -11,7 +11,7 @@ namespace tpcc {
 
 class MockTPCCDB : public TPCCDB {
 public:
-    MockTPCCDB() : new_order_committed_(true) {}
+    MockTPCCDB() : new_order_committed_(true), undo_count_(0) {}
 
     virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
         w_id_ = warehouse_id;
@@ -39,33 +39,48 @@ public:
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
             NewOrderOutput* output, TPCCUndo** undo) {
+        return newOrderHome(warehouse_id, district_id, customer_id, items, now, output, undo);
+    }
+
+    virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+            const std::vector<NewOrderItem>& items, const char* now,
+            NewOrderOutput* output, TPCCUndo** undo) {
         w_id_ = warehouse_id;
         d_id_ = district_id;
         c_id_ = customer_id;
         items_ = items;
         now_ = now;
 
+        // when newOrder aborts, it doesn't have an undo buffer
+        if (undo != NULL && new_order_committed_) {
+            *undo = (TPCCUndo*) this;
+            undo_count_ += 1;
+        }
+
         output->d_tax = 42;
         return new_order_committed_;
-    }
-
-    virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-            const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output, TPCCUndo** undo) {
-        assert(false);
-        return false;
     }
 
     virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
             const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities,
             TPCCUndo** undo) {
-        assert(false);
-        return false;
+        w_id_ = home_warehouse;
+        remote_warehouse_ = remote_warehouse;
+        items_ = items;
+
+        // when newOrder aborts, it doesn't have an undo buffer
+        if (undo != NULL && new_order_committed_) {
+            *undo = (TPCCUndo*) this;
+            undo_count_ += 1;
+        }
+
+        out_quantities->push_back(42);
+        return new_order_committed_;
     }
 
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-            PaymentOutput* output) {
+            PaymentOutput* output, TPCCUndo** undo) {
         w_id_ = warehouse_id;
         d_id_ = district_id;
         c_w_id_ = c_warehouse_id;
@@ -78,7 +93,7 @@ public:
 
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-            PaymentOutput* output) {
+            PaymentOutput* output, TPCCUndo** undo) {
         w_id_ = warehouse_id;
         d_id_ = district_id;
         c_w_id_ = c_warehouse_id;
@@ -91,15 +106,17 @@ public:
 
     virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
-            PaymentOutput* output) {
+            PaymentOutput* output, TPCCUndo** undo) {
         assert(false);
     }
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output) {
+            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
+            TPCCUndo** undo) {
         assert(false);
     }
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output) {
+            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
+            TPCCUndo** undo) {
         assert(false);
     }
 
@@ -114,9 +131,19 @@ public:
         (*orders)[0].o_id = 42;
     }
 
-    virtual bool hasWarehouse(int32_t warehouse_id) { assert(false); return false; }
-    virtual void applyUndo(TPCCUndo* undo) { assert(false); }
-    virtual void freeUndo(TPCCUndo* undo) { assert(false); }
+    virtual bool hasWarehouse(int32_t warehouse_id) {
+        return true;
+    }
+
+    virtual void applyUndo(TPCCUndo* undo) {
+        assert(undo == (TPCCUndo*) this);
+        assert(undo_count_ > 0);
+        undo_count_ -= 1;
+    }
+
+    virtual void freeUndo(TPCCUndo* undo) {
+        applyUndo(undo);
+    }
 
     int32_t w_id_;
     int32_t d_id_;
@@ -128,10 +155,12 @@ public:
     int32_t c_w_id_;
     int32_t c_d_id_;
     int32_t c_id_;
+    int32_t remote_warehouse_;
     float h_amount_;
     std::vector<NewOrderItem> items_;
 
     bool new_order_committed_;
+    int undo_count_;
 
 private:
     void setOrderOutput(OrderStatusOutput* output) {

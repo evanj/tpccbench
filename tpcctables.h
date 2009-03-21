@@ -34,17 +34,19 @@ public:
             TPCCUndo** undo);
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-            PaymentOutput* output);
+            PaymentOutput* output, TPCCUndo** undo);
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-            PaymentOutput* output);
+            PaymentOutput* output, TPCCUndo** undo);
     virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
-            PaymentOutput* output);
+            PaymentOutput* output, TPCCUndo** undo);
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output);
+            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
+            TPCCUndo** undo);
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output);
+            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
+            TPCCUndo** undo);
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
             std::vector<DeliveryOrderInfo>* orders);
     virtual bool hasWarehouse(int32_t warehouse_id) { return findWarehouse(warehouse_id) != NULL; }
@@ -84,7 +86,8 @@ public:
     NewOrder* findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
 
     const std::vector<const History*>& history() const { return history_; }
-    void insertHistory(const History& history);
+    // Stores order in the database. Returns a pointer to the database's tuple.
+    History* insertHistory(const History& history);
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
@@ -101,14 +104,16 @@ private:
 
     // Implements payment transaction after the customer tuple has been located.
     void internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
-            float h_amount, PaymentOutput* output);
+            float h_amount, PaymentOutput* output, TPCCUndo** undo);
 
-    // Erases order from the database. NOTE: This is only "permitted" when undoing a transaction.
+    // Erases order from the database. NOTE: This is only for undoing transactions.
     void eraseOrder(const Order* order);
-    // Erases order_line from the database. NOTE: This is only "permitted" when undoing a transaction.
+    // Erases order_line from the database. NOTE: This is only for undoing transactions.
     void eraseOrderLine(const OrderLine* order_line);
-    // Erases new_order from the database. NOTE: This is only "permitted" when undoing a transaction.
+    // Erases new_order from the database. NOTE: This is only for undoing transactions.
     void eraseNewOrder(const NewOrder* new_order);
+    // Erases history from the database. NOTE: This is only for undoing transactions.
+    void eraseHistory(const History* history);
 
     // TODO: Use a data structure that supports deletes, appends, and sparse ranges.
     // Using a vector instead of a BPlusTree reduced the new order run time by 3.65us. This was an

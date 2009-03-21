@@ -663,7 +663,7 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     makeCustomer(W_ID-1, D_ID-1, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
 
     PaymentOutput output;
-    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
+    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output, NULL);
 
     // Verify that YTD has been incremented
     EXPECT_EQ(123.45f, tables_.findWarehouse(W_ID)->w_ytd);
@@ -691,7 +691,7 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     EXPECT_EQ(0, strcmp("wname    dname", h->h_data));
 
     // Another payment: check that it does the insert correctly
-    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
+    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output, NULL);
     EXPECT_EQ(0, strcmp("(3, 1, 99, 2, 100, 123.45)\n(3, 1, 99, 2, 100, 123.45)\n",
             output.c_data));
     EXPECT_EQ(2, tables_.history().size());
@@ -704,7 +704,7 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     size_t length = strlen(match);
     memset(match+length, 'a', Customer::MAX_DATA-length);
     match[Customer::MAX_DATA] = '\0';
-    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
+    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output, NULL);
     EXPECT_EQ(0, strcmp(match, output.c_data));
     EXPECT_EQ(3, tables_.history().size());
 }
@@ -715,7 +715,7 @@ TEST_F(TPCCTablesTest, PaymentRemote) {
     makeCustomer(W_ID-1, D_ID-1, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
 
     PaymentOutput output;
-    tables_.paymentHome(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
+    tables_.paymentHome(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output, NULL);
 
     // Verify that YTD has been incremented
     EXPECT_EQ(123.45f, tables_.findWarehouse(W_ID)->w_ytd);
@@ -731,7 +731,7 @@ TEST_F(TPCCTablesTest, PaymentRemote) {
 
     // Remote payment
     PaymentOutput out2;
-    tables_.paymentRemote(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, &out2);
+    tables_.paymentRemote(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, &out2, NULL);
     EXPECT_EQ(0, strlen(out2.w_street_1));
 
     // customer has now been updated
@@ -749,7 +749,7 @@ TEST_F(TPCCTablesTest, PaymentGoodCredit) {
     strcpy(c->c_credit, Customer::GOOD_CREDIT);
 
     PaymentOutput output;
-    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
+    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output, NULL);
     EXPECT_EQ(0, strlen(output.c_data));
 }
 
@@ -759,8 +759,25 @@ TEST_F(TPCCTablesTest, PaymentByName) {
     makeCustomer(W_ID-1, D_ID-1, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
 
     PaymentOutput output;
-    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, CUSTOMER_LAST, 123.45f, NOW, &output);
+    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, CUSTOMER_LAST, 123.45f, NOW, &output, NULL);
     EXPECT_EQ(output.c_balance, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_balance);
+}
+
+TEST_F(TPCCTablesTest, PaymentUndo) {
+    makeWarehouse(W_ID);
+    makeDistrict(W_ID, D_ID, 22);
+    makeCustomer(W_ID-1, D_ID-1, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
+
+    PaymentOutput output;
+    tables_.payment(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output, &undo_);
+    EXPECT_TRUE(undo_ != NULL);
+    tables_.applyUndo(undo_);
+
+    // Verify that nothing has changed
+    EXPECT_EQ(0, tables_.findWarehouse(W_ID)->w_ytd);
+    EXPECT_EQ(0, tables_.findDistrict(W_ID, D_ID)->d_ytd);
+    EXPECT_EQ(CUSTOMER_BALANCE, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_balance);
+    EXPECT_EQ(0, tables_.history().size());
 }
 
 TEST_F(TPCCTablesTest, DeliveryNoOrders) {

@@ -357,22 +357,22 @@ bool TPCCTables::findAndValidateItems(const vector<NewOrderItem>& items,
 
 void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
         int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-        PaymentOutput* output) {
+        PaymentOutput* output, TPCCUndo** undo) {
     //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
     Customer* customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
-            now, output);
-    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
+            now, output, undo);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
 }
 
 void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
         int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-        PaymentOutput* output) {
+        PaymentOutput* output, TPCCUndo** undo) {
     //~ printf("payment %d %d %d %d %s %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, c_last, h_amount, now);
     Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer->c_id, h_amount,
-            now, output);
-    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
+            now, output, undo);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
 }
 
 #define COPY_ADDRESS(src, dest, prefix) \
@@ -397,26 +397,37 @@ static void zeroWarehouseDistrict(PaymentOutput* output) {
 }
 
 void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output) {
+        int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
+        TPCCUndo** undo) {
     Customer* customer = findCustomer(c_warehouse_id, c_district_id, c_id);
-    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
 void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output) {
+        int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
+        TPCCUndo** undo) {
     Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
-    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
 
 void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
         int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-        PaymentOutput* output) {
+        PaymentOutput* output, TPCCUndo** undo) {
     Warehouse* w = findWarehouse(warehouse_id);
+    if (undo != NULL) {
+        if (*undo == NULL) {
+            *undo = new TPCCUndo();
+        }
+        (*undo)->save(w);
+    }
     w->w_ytd += h_amount;
     COPY_ADDRESS(w, output, w_);
 
     District* d = findDistrict(warehouse_id, district_id);
+    if (undo != NULL) {
+        (*undo)->save(d);
+    }
     d->d_ytd += h_amount;
     COPY_ADDRESS(d, output, d_);
 
@@ -432,7 +443,10 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
     strcpy(h.h_data, w->w_name);
     strcat(h.h_data, "    ");
     strcat(h.h_data, d->d_name);
-    insertHistory(h);
+    History* history = insertHistory(h);
+    if (undo != NULL) {
+        (*undo)->inserted(history);
+    }
 
     // Zero all the customer fields: avoid uninitialized data for serialization
     output->c_credit_lim = 0;
@@ -449,7 +463,13 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
 }
 
 void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
-        float h_amount, PaymentOutput* output) {
+        float h_amount, PaymentOutput* output, TPCCUndo** undo) {
+    if (undo != NULL) {
+        if (*undo == NULL) {
+            *undo = new TPCCUndo();
+        }
+        (*undo)->save(c);
+    }
     c->c_balance -= h_amount;
     c->c_ytd_payment += h_amount;
     c->c_payment_cnt += 1;
@@ -560,12 +580,15 @@ static void eraseTuple(const T& set, TPCCTables* tables,
 }
 
 void TPCCTables::applyUndo(TPCCUndo* undo) {
+    restoreFromMap(undo->modified_warehouses());
     restoreFromMap(undo->modified_districts());
+    restoreFromMap(undo->modified_customers());
     restoreFromMap(undo->modified_stock());
 
     eraseTuple(undo->inserted_orders(), this, &TPCCTables::eraseOrder);
     eraseTuple(undo->inserted_order_lines(), this, &TPCCTables::eraseOrderLine);
     eraseTuple(undo->inserted_new_orders(), this, &TPCCTables::eraseNewOrder);
+    eraseTuple(undo->inserted_history(), this, &TPCCTables::eraseHistory);
 
     delete undo;
 }
@@ -834,7 +857,26 @@ void TPCCTables::eraseNewOrder(const NewOrder* new_order) {
     delete new_order;
 }
 
-void TPCCTables::insertHistory(const History& history) {
+History* TPCCTables::insertHistory(const History& history) {
     History* h = new History(history);
     history_.push_back(h);
+    return h;
+}
+void TPCCTables::eraseHistory(const History* history) {
+    // Search backwards to find the history: it likely was inserted recently (or last)
+    bool found = false;
+    for (int i = history_.size()-1; i >= 0; --i) {
+        if (history == history_[i]) {
+            if (i != history_.size() - 1) {
+                // erase not at end: move the last element here
+                history_[i] = history_[history_.size() - 1];
+            }
+            found = true;
+            break;
+        }
+    }
+    assert(found);
+    // Remove the last element
+    history_.pop_back();
+    delete history;
 }

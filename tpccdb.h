@@ -337,15 +337,24 @@ class TPCCUndo {
 public:
     ~TPCCUndo();
 
+    void save(Warehouse* w);
     void save(District* d);
+    void save(Customer* c);
     void save(Stock* s);
 
     void inserted(const Order* o);
     void inserted(const OrderLine* ol);
     void inserted(const NewOrder* no);
+    void inserted(const History* h);
+
+    typedef std::tr1::unordered_map<Warehouse*, Warehouse*> WarehouseMap;
+    const WarehouseMap& modified_warehouses() const { return modified_warehouses_; }
 
     typedef std::tr1::unordered_map<District*, District*> DistrictMap;
     const DistrictMap& modified_districts() const { return modified_districts_; }
+
+    typedef std::tr1::unordered_map<Customer*, Customer*> CustomerMap;
+    const CustomerMap& modified_customers() const { return modified_customers_; }
 
     typedef std::tr1::unordered_map<Stock*, Stock*> StockMap;
     const StockMap& modified_stock() const { return modified_stock_; }
@@ -359,13 +368,19 @@ public:
     typedef std::tr1::unordered_set<const NewOrder*> NewOrderSet;
     const NewOrderSet& inserted_new_orders() const { return inserted_new_orders_; }
 
+    typedef std::tr1::unordered_set<const History*> HistorySet;
+    const HistorySet& inserted_history() const { return inserted_history_; }
+
 private:
+    WarehouseMap modified_warehouses_;
     DistrictMap modified_districts_;
+    CustomerMap modified_customers_;
     StockMap modified_stock_;
 
     OrderSet inserted_orders_;
     OrderLineSet inserted_order_lines_;
     NewOrderSet inserted_new_orders_;
+    HistorySet inserted_history_;
 };
 
 // Interface to the TPC-C transaction implementation.
@@ -428,22 +443,24 @@ public:
     // See TPC-C 2.5 (page 32).
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-            PaymentOutput* output) = 0;
+            PaymentOutput* output, TPCCUndo** undo) = 0;
 
     // Executes the TPC-C payment transaction. Add h_amount to the customer's account.
     // See TPC-C 2.5 (page 32).
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-            PaymentOutput* output) = 0;
+            PaymentOutput* output, TPCCUndo** undo) = 0;
 
     // TODO: See CHEATS: c_id is invalid for customer by last name transactions
     virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
-            PaymentOutput* output) = 0;
+            PaymentOutput* output, TPCCUndo** undo) = 0;
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output) = 0;
+            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
+            TPCCUndo** undo) = 0;
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output) = 0;
+            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
+            TPCCUndo** undo) = 0;
 
     // Combines results from paymentRemote in remote into the results from paymentHome in home.
     static void paymentCombine(const PaymentOutput& remote, PaymentOutput* home);

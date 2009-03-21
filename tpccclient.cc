@@ -102,11 +102,11 @@ void TPCCClient::doPayment() {
         // 60%: payment by last name
         char c_last[Customer::MAX_LAST+1];
         generator_->lastName(c_last, customers_per_district_);
-        db_->payment(w_id, d_id, c_w_id, c_d_id, c_last, h_amount, now, &output);
+        db_->payment(w_id, d_id, c_w_id, c_d_id, c_last, h_amount, now, &output, NULL);
     } else {
         // 40%: payment by id
         ASSERT(y > 60);
-        db_->payment(w_id, d_id, c_w_id, c_d_id, generateCID(), h_amount, now, &output);
+        db_->payment(w_id, d_id, c_w_id, c_d_id, generateCID(), h_amount, now, &output, NULL);
     }
 }
 
