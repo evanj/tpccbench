@@ -46,6 +46,7 @@ public:
             int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output);
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
             std::vector<DeliveryOrderInfo>* orders);
+    virtual bool hasWarehouse(int32_t warehouse_id) { return findWarehouse(warehouse_id) != NULL; }
 
     void reserveItems(int size) { items_.reserve(size); }
     // Copies item into the item table.

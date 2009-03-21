@@ -373,9 +373,12 @@ public:
     static WarehouseSet newOrderRemoteWarehouses(int32_t home_warehouse,
             const std::vector<NewOrderItem>& items);
 
-    // Combines the quantities from warehouse_id into output.
-    static void newOrderCombine(const std::vector<NewOrderItem>& items, int32_t warehouse_id,
-            const std::vector<int32_t>& remote_quantities, NewOrderOutput* output);
+    static const int32_t INVALID_QUANTITY = -1;
+    // Combines valid quantities into output.
+    static void newOrderCombine(const std::vector<int32_t>& remote_quantities,
+            NewOrderOutput* output);
+    static void newOrderCombine(const std::vector<int32_t>& quantities,
+            std::vector<int32_t>* output);
 
     // Executes the TPC-C payment transaction. Add h_amount to the customer's account.
     // See TPC-C 2.5 (page 32).
@@ -405,6 +408,9 @@ public:
     // district in warehouse_id. See TPC-C 2.7 (page 39).
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
             std::vector<DeliveryOrderInfo>* orders) = 0;
+
+    // Returns true if warehouse_id is present on this partition.
+    virtual bool hasWarehouse(int32_t warehouse_id) = 0;
 };
 
 #endif

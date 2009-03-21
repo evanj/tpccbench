@@ -46,16 +46,24 @@ TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(int32_t home_warehouse,
     return out;
 }
 
-void TPCCDB::newOrderCombine(const std::vector<NewOrderItem>& items, int32_t warehouse_id,
-        const std::vector<int32_t>& remote_quantities, NewOrderOutput* output) {
+void TPCCDB::newOrderCombine(const std::vector<int32_t>& remote_quantities,
+        NewOrderOutput* output) {
     assert(remote_quantities.size() == output->items.size());
-    assert(remote_quantities.size() == items.size());
-    for (size_t i = 0; i < items.size(); ++i) {
-        if (items[i].ol_supply_w_id != warehouse_id) {
-            assert(remote_quantities[i] == 0);
-        } else {
+    for (size_t i = 0; i < remote_quantities.size(); ++i) {
+        if (remote_quantities[i] != INVALID_QUANTITY) {
             assert(output->items[i].s_quantity == 0);
             output->items[i].s_quantity = remote_quantities[i];
+        }
+    }
+}
+
+void TPCCDB::newOrderCombine(const std::vector<int32_t>& remote_quantities,
+        std::vector<int32_t>* output) {
+    assert(remote_quantities.size() == output->size());
+    for (size_t i = 0; i < remote_quantities.size(); ++i) {
+        if (remote_quantities[i] != INVALID_QUANTITY) {
+            assert((*output)[i] == INVALID_QUANTITY);
+            (*output)[i] = remote_quantities[i];
         }
     }
 }

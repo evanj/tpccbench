@@ -113,6 +113,8 @@ public:
         (*orders)[0].o_id = 42;
     }
 
+    virtual bool hasWarehouse(int32_t warehouse_id) { assert(false); return false; }
+
     int32_t w_id_;
     int32_t d_id_;
     int32_t stock_level_threshold_;

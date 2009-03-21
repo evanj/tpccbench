@@ -593,8 +593,8 @@ TEST_F(TPCCTablesTest, NewOrderPartitionSuccess) {
     EXPECT_EQ(1, remote_s->s_order_cnt);
     EXPECT_EQ(1, remote_s->s_remote_cnt);
 
-    // Combining the bit set turns the right item to "BRAND" and updates s_quantity
-    TPCCDB::newOrderCombine(items, W_ID-1, remote_quantities, &output);
+    // Combining the quantities to produce the correct final output
+    TPCCDB::newOrderCombine(remote_quantities, &output);
     EXPECT_EQ(10, output.items[1].s_quantity);
 }
 

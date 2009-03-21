@@ -170,7 +170,7 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t cus
         vector<int32_t> quantities;
         result = newOrderRemote(warehouse_id, *i, items, &quantities);
         assert(result);
-        newOrderCombine(items, *i, quantities, output);
+        newOrderCombine(quantities, output);
     }
 
     return true;
@@ -277,7 +277,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     vector<int32_t> quantities;
     bool result = newOrderRemote(warehouse_id, warehouse_id, items, &quantities);
     assert(result);
-    newOrderCombine(items, warehouse_id, quantities, output);
+    newOrderCombine(quantities, output);
 
     return true;
 }
@@ -295,7 +295,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
     for (int i = 0; i < items.size(); ++i) {
         // Skip items that don't belong to remote warehouse
         if (items[i].ol_supply_w_id != remote_warehouse) {
-            (*out_quantities)[i] =0;
+            (*out_quantities)[i] = INVALID_QUANTITY;
             continue;
         }
 
