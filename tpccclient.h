@@ -35,6 +35,9 @@ public:
     static const float MAX_PAYMENT_AMOUNT = 5000.00;
     static const int32_t MAX_OL_QUANTITY = 10;
 
+    // Sets the remote item probability in units of thousandths of probability (10 = p(x) = 0.01)
+    void remote_item_milli_p(int remote_item_milli_p);
+
 private:
     int32_t generateWarehouse();
     int32_t generateDistrict();
@@ -48,6 +51,8 @@ private:
     int num_warehouses_;
     int districts_per_warehouse_;
     int customers_per_district_;
+
+    int remote_item_milli_p_;
 };
 
 #endif

@@ -199,6 +199,8 @@ struct OrderLine {
     static const int INITIAL_QUANTITY = 5;
     static const float MIN_AMOUNT = 0.01f;
     static const float MAX_AMOUNT = 9999.99f;
+    // new order has 10/1000 probability of selecting a remote warehouse for ol_supply_w_id
+    static const int REMOTE_PROBABILITY_MILLIS = 10;
 
     int32_t ol_o_id;
     int32_t ol_d_id;

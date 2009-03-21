@@ -23,7 +23,8 @@ TPCCClient::TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* d
         num_items_(num_items),
         num_warehouses_(num_warehouses),
         districts_per_warehouse_(districts_per_warehouse),
-        customers_per_district_(customers_per_district) {
+        customers_per_district_(customers_per_district),
+        remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS) {
     ASSERT(clock_ != NULL);
     ASSERT(generator_ != NULL);
     ASSERT(db_ != NULL);
@@ -125,7 +126,9 @@ bool TPCCClient::doNewOrder() {
             items[i].i_id = generateItemID();
         }
 
-        bool remote = generator_->number(1, 100) == 1;
+        // TPC-C suggests generating a number in range (1, 100) and selecting remote on 1
+        // This provides more variation, and lets us tune the fraction of "remote" transactions.
+        bool remote = generator_->number(1, 1000) <= remote_item_milli_p_;
         if (num_warehouses_ > 1 && remote) {
             items[i].ol_supply_w_id = generator_->numberExcluding(1, num_warehouses_, w_id);
         } else {
@@ -160,6 +163,11 @@ void TPCCClient::doOne() {
         ASSERT(x > 100-45);
         doNewOrder();
     }
+}
+
+void TPCCClient::remote_item_milli_p(int remote_item_milli_p) {
+    assert(0 <= remote_item_milli_p && remote_item_milli_p <= 1000);
+    remote_item_milli_p_ = remote_item_milli_p;
 }
 
 int32_t TPCCClient::generateWarehouse() {

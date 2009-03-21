@@ -202,6 +202,21 @@ TEST_F(TPCCClientTest, DoNewOrderSmall) {
     delete small;
 }
 
+TEST_F(TPCCClientTest, DoNewOrderRemoteP) {
+    EXPECT_DEATH(client_.remote_item_milli_p(-1));
+    EXPECT_DEATH(client_.remote_item_milli_p(1001));
+    client_.remote_item_milli_p(0);
+    // 100% remote items; maximum nomally is all local items
+    client_.remote_item_milli_p(1000);
+    db_->new_order_committed_ = true;
+    generator_->minimum_ = false;
+    EXPECT_TRUE(client_.doNewOrder());
+ 
+    for (int i = 0; i < db_->items_.size(); ++i) {
+        EXPECT_EQ(WAREHOUSES-1, db_->items_[0].ol_supply_w_id);
+    }
+}
+
 int main() {
     return TestSuite::globalInstance()->runAll();
 }
