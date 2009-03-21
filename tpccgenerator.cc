@@ -223,11 +223,7 @@ void TPCCGenerator::generateHistory(int32_t c_id, int32_t d_id, int32_t w_id, Hi
     random_->astring(history->h_data, History::MIN_DATA, History::MAX_DATA);
 }
 
-void TPCCGenerator::makeWarehouse(TPCCTables* tables, int32_t w_id) {
-    Warehouse w;
-    generateWarehouse(w_id, &w);
-    tables->insertWarehouse(w);
-
+void TPCCGenerator::makeStock(TPCCTables* tables, int32_t w_id) {
     // Select 10% of the stock to be marked "original"
     set<int> selected_rows = selectUniqueIds(random_, num_items_/10, 1, num_items_);
 
@@ -237,6 +233,17 @@ void TPCCGenerator::makeWarehouse(TPCCTables* tables, int32_t w_id) {
         generateStock(i, w_id, is_original, &s);
         tables->insertStock(s);
     }
+}
+
+void TPCCGenerator::makeWarehouse(TPCCTables* tables, int32_t w_id) {
+    makeStock(tables, w_id);
+    makeWarehouseWithoutStock(tables, w_id);
+}
+
+void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables* tables, int32_t w_id) {
+    Warehouse w;
+    generateWarehouse(w_id, &w);
+    tables->insertWarehouse(w);
 
     for (int d_id = 1; d_id <= districts_per_warehouse_; ++d_id) {
         District d;
@@ -244,7 +251,7 @@ void TPCCGenerator::makeWarehouse(TPCCTables* tables, int32_t w_id) {
         tables->insertDistrict(d);
 
         // Select 10% of the customers to have bad credit
-        selected_rows = selectUniqueIds(random_, customers_per_district_/10, 1,
+        set<int> selected_rows = selectUniqueIds(random_, customers_per_district_/10, 1,
                 customers_per_district_);
         for (int c_id = 1; c_id <= customers_per_district_; ++c_id) {
             Customer c;

@@ -46,8 +46,15 @@ public:
 
     void generateHistory(int32_t c_id, int32_t d_id, int32_t w_id, History* history);
 
+    // Generates stock rows for w_id.
+    void makeStock(TPCCTables* tables, int32_t w_id);
+
     // Generates one warehouse and all related rows.
     void makeWarehouse(TPCCTables* tables, int32_t w_id);
+
+    // Generates one warehouse and related rows, except stock.
+    // TODO: This exists to support partitioning. Does this make sense?
+    void makeWarehouseWithoutStock(TPCCTables* tables, int32_t w_id);
 
 private:
     tpcc::RandomGenerator* random_;
