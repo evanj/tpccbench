@@ -26,6 +26,11 @@ public:
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
             NewOrderOutput* output);
+    virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+            const std::vector<NewOrderItem>& items, const char* now,
+            NewOrderOutput* output);
+    virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
+            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities);
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
             PaymentOutput* output);
@@ -72,6 +77,10 @@ public:
 
 private:
     static const int STOCK_LEVEL_ORDERS = 20;
+
+    // Loads each item from the items table. Returns true if they are all found.
+    bool findAndValidateItems(const std::vector<NewOrderItem>& items,
+            std::vector<Item*>* item_tuples);
 
     // Implements order status transaction after the customer tuple has been located.
     void internalOrderStatus(Customer* customer, OrderStatusOutput* output);

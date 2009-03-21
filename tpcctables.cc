@@ -158,6 +158,27 @@ void TPCCTables::internalOrderStatus(Customer* customer, OrderStatusOutput* outp
 
 bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
         const std::vector<NewOrderItem>& items, const char* now, NewOrderOutput* output) {
+    // perform the home part
+    bool result = newOrderHome(warehouse_id, district_id, customer_id, items, now, output);
+    if (!result) {
+        return false;
+    }
+
+    // Process all remote warehouses
+    WarehouseSet warehouses = newOrderRemoteWarehouses(warehouse_id, items);
+    for (WarehouseSet::const_iterator i = warehouses.begin(); i != warehouses.end(); ++i) {
+        vector<int32_t> quantities;
+        result = newOrderRemote(warehouse_id, *i, items, &quantities);
+        assert(result);
+        newOrderCombine(items, *i, quantities, output);
+    }
+
+    return true;
+}
+
+bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+        const vector<NewOrderItem>& items, const char* now,
+        NewOrderOutput* output) {
     //~ printf("new order %d %d %d %d %s\n", warehouse_id, district_id, customer_id, items.size(), now);
     // 2.4.3.4. requires that we display c_last, c_credit, and o_id for rolled back transactions:
     // read those values first
@@ -174,14 +195,19 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t cus
 
     // CHEAT: Validate all items to see if we will need to abort
     vector<Item*> item_tuples(items.size());
+    if (!findAndValidateItems(items, &item_tuples)) {
+        strcpy(output->status, NewOrderOutput::INVALID_ITEM_STATUS);
+        return false;
+    }
+
+    // Check if this is an all local transaction
+    // TODO: This loops through items *again* which is slightly inefficient
     bool all_local = true;
     for (int i = 0; i < items.size(); ++i) {
-        item_tuples[i] = findItem(items[i].i_id);
-        if (item_tuples[i] == NULL) {
-            strcpy(output->status, NewOrderOutput::INVALID_ITEM_STATUS);
-            return false;
+        if (items[i].ol_supply_w_id != warehouse_id) {
+            all_local = false;
+            break;
         }
-        all_local = all_local && items[i].ol_supply_w_id == warehouse_id;
     }
 
     // We will not abort: update the status and the database state
@@ -220,23 +246,21 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t cus
         line.ol_supply_w_id = items[i].ol_supply_w_id;
         line.ol_quantity = items[i].ol_quantity;
 
-        // Read and update stock
+        // Vertical Partitioning HACK: We read s_dist_xx from our local replica, assuming that
+        // these columns are replicated everywhere.
+        // TODO: I think this is unrealistic, since it will occupy ~23 MB per warehouse on all
+        // replicas. Try the "two round" version in the future.
         Stock* stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
-        if (stock->s_quantity >= items[i].ol_quantity + 10) {
-            stock->s_quantity -= items[i].ol_quantity;
-        } else {
-            stock->s_quantity = stock->s_quantity - items[i].ol_quantity + 91;
-        }
-        output->items[i].s_quantity = stock->s_quantity;
         assert(sizeof(line.ol_dist_info) == sizeof(stock->s_dist[district_id]));
         memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
-        stock->s_ytd += items[i].ol_quantity;
-        stock->s_order_cnt += 1;
-        if (items[i].ol_supply_w_id != warehouse_id) {
-            // remote order
-            stock->s_remote_cnt += 1;
-        }
+        // Since we *need* to replicate s_dist_xx columns, might as well replicate s_data
+        // Makes it 290 bytes per tuple, or ~28 MB per warehouse.
         bool stock_is_original = (strstr(stock->s_data, "ORIGINAL") != NULL);
+        if (stock_is_original && strstr(item_tuples[i]->i_data, "ORIGINAL") != NULL) {
+            output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
+        } else {
+            output->items[i].brand_generic = NewOrderOutput::ItemInfo::GENERIC;
+        }
 
         assert(sizeof(output->items[i].i_name) == sizeof(item_tuples[i]->i_name));
         memcpy(output->items[i].i_name, item_tuples[i]->i_name, sizeof(output->items[i].i_name));
@@ -245,16 +269,69 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t cus
                 static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
         line.ol_amount = output->items[i].ol_amount;
         output->total += output->items[i].ol_amount;
-        if (stock_is_original && strstr(item_tuples[i]->i_data, "ORIGINAL") != NULL) {
-            output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
-        } else {
-            output->items[i].brand_generic = NewOrderOutput::ItemInfo::GENERIC;
-        }
         insertOrderLine(line);
+    }
+
+    // Perform the "remote" part for this warehouse
+    // TODO: It might be more efficient to merge this into the loop above, but this is simpler.
+    vector<int32_t> quantities;
+    bool result = newOrderRemote(warehouse_id, warehouse_id, items, &quantities);
+    assert(result);
+    newOrderCombine(items, warehouse_id, quantities, output);
+
+    return true;
+}
+
+bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
+        const vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities) {
+    // Validate all the items: needed so that we don't need to undo in order to execute this
+    // TODO: item_tuples is unused. Remove?
+    vector<Item*> item_tuples;
+    if (!findAndValidateItems(items, &item_tuples)) {
+        return false;
+    }
+
+    out_quantities->resize(items.size());
+    for (int i = 0; i < items.size(); ++i) {
+        // Skip items that don't belong to remote warehouse
+        if (items[i].ol_supply_w_id != remote_warehouse) {
+            (*out_quantities)[i] =0;
+            continue;
+        }
+
+        // update stock
+        Stock* stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
+        if (stock->s_quantity >= items[i].ol_quantity + 10) {
+            stock->s_quantity -= items[i].ol_quantity;
+        } else {
+            stock->s_quantity = stock->s_quantity - items[i].ol_quantity + 91;
+        }
+        (*out_quantities)[i] = stock->s_quantity;
+        stock->s_ytd += items[i].ol_quantity;
+        stock->s_order_cnt += 1;
+        // newOrderHome calls newOrderRemote, so this is needed
+        if (items[i].ol_supply_w_id != home_warehouse) {
+            // remote order
+            stock->s_remote_cnt += 1;
+        }
     }
 
     return true;
 }
+
+bool TPCCTables::findAndValidateItems(const vector<NewOrderItem>& items,
+        vector<Item*>* item_tuples) {
+    // CHEAT: Validate all items to see if we will need to abort
+    item_tuples->resize(items.size());
+    for (int i = 0; i < items.size(); ++i) {
+        (*item_tuples)[i] = findItem(items[i].i_id);
+        if ((*item_tuples)[i] == NULL) {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
         int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,

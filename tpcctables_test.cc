@@ -543,6 +543,61 @@ TEST_F(TPCCTablesTest, NewOrderSuccess) {
     EXPECT_EQ(0, strcmp(STOCK_DIST, line->ol_dist_info));
 }
 
+TEST_F(TPCCTablesTest, NewOrderPartitionSuccess) {
+    makeWarehouse(W_ID);
+    makeDistrict(W_ID, D_ID, 22);
+    makeCustomer(W_ID, D_ID, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
+    makeItem(1);
+    makeItem(2);
+    makeStock(W_ID, 1, 18, false);
+    makeStock(W_ID-1, 2, 19, true);
+
+    vector<NewOrderItem> items(2);
+    items[0].i_id = 1;
+    items[0].ol_supply_w_id = W_ID;
+    items[0].ol_quantity = 9;
+    items[1].i_id = 2;
+    items[1].ol_supply_w_id = W_ID-1;
+    items[1].ol_quantity = 9;
+    struct NewOrderOutput output;
+    bool success = tables_.newOrderHome(W_ID, D_ID, C_ID, items, NOW, &output);
+    EXPECT_TRUE(success);
+
+    ASSERT_EQ(2, output.items.size());
+    // brand/generic is computed at the home warehouse. s_quantity comes from remote
+    EXPECT_EQ(100, output.items[0].s_quantity);
+    EXPECT_EQ(NewOrderOutput::ItemInfo::GENERIC, output.items[0].brand_generic);
+    EXPECT_EQ(0, output.items[1].s_quantity);
+    EXPECT_EQ(NewOrderOutput::ItemInfo::BRAND, output.items[1].brand_generic);
+
+    // Home warehouse items are modified, but the remote warehouse items are not
+    Stock* home_s = tables_.findStock(W_ID, 1);
+    EXPECT_EQ(100, home_s->s_quantity);
+    EXPECT_EQ(9, home_s->s_ytd);
+    EXPECT_EQ(1, home_s->s_order_cnt);
+    EXPECT_EQ(0, home_s->s_remote_cnt);
+    Stock* remote_s = tables_.findStock(W_ID-1, 2);
+    EXPECT_EQ(19, remote_s->s_quantity);
+    EXPECT_EQ(0, remote_s->s_ytd);
+    EXPECT_EQ(0, remote_s->s_order_cnt);
+    EXPECT_EQ(0, remote_s->s_remote_cnt);
+
+    // Execute the remote part
+    vector<int32_t> remote_quantities;
+    success = tables_.newOrderRemote(W_ID, W_ID-1, items, &remote_quantities);
+    EXPECT_TRUE(success);
+
+    // Remote warehouse item is updated
+    EXPECT_EQ(10, remote_s->s_quantity);
+    EXPECT_EQ(9, remote_s->s_ytd);
+    EXPECT_EQ(1, remote_s->s_order_cnt);
+    EXPECT_EQ(1, remote_s->s_remote_cnt);
+
+    // Combining the bit set turns the right item to "BRAND" and updates s_quantity
+    TPCCDB::newOrderCombine(items, W_ID-1, remote_quantities, &output);
+    EXPECT_EQ(10, output.items[1].s_quantity);
+}
+
 TEST_F(TPCCTablesTest, NewOrderAllLocal) {
     makeWarehouse(W_ID);
     makeDistrict(W_ID, D_ID, 22);

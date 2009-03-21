@@ -1,3 +1,5 @@
+#include <cassert>
+
 #include "tpccdb.h"
 
 void Address::copy(char* street1, char* street2, char* city, char* state, char* zip,
@@ -32,3 +34,28 @@ const float OrderLine::MIN_AMOUNT;
 const float OrderLine::MAX_AMOUNT;
 const char NewOrderOutput::INVALID_ITEM_STATUS[] = "Item number is not valid";
 const float History::INITIAL_AMOUNT;
+
+TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(int32_t home_warehouse,
+        const std::vector<NewOrderItem>& items) {
+    WarehouseSet out;
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i].ol_supply_w_id != home_warehouse) {
+            out.insert(items[i].ol_supply_w_id);
+        }
+    }
+    return out;
+}
+
+void TPCCDB::newOrderCombine(const std::vector<NewOrderItem>& items, int32_t warehouse_id,
+        const std::vector<int32_t>& remote_quantities, NewOrderOutput* output) {
+    assert(remote_quantities.size() == output->items.size());
+    assert(remote_quantities.size() == items.size());
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i].ol_supply_w_id != warehouse_id) {
+            assert(remote_quantities[i] == 0);
+        } else {
+            assert(output->items[i].s_quantity == 0);
+            output->items[i].s_quantity = remote_quantities[i];
+        }
+    }
+}

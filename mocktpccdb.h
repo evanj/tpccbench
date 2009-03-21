@@ -1,6 +1,7 @@
 #ifndef BENCH_MOCKTPCCDB_H__
 #define BENCH_MOCKTPCCDB_H__
 
+#include <cassert>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,25 @@ public:
         output->d_tax = 42;
         return new_order_committed_;
     }
+
+    // Executes the "home warehouse" portion of the new order transaction.
+    virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+            const std::vector<NewOrderItem>& items, const char* now,
+            NewOrderOutput* output) {
+        assert(false);
+        return false;
+    }
+
+    // Executes the "remote warehouse" portion of the new order transaction. Modifies the stock
+    // for remote_warehouse. Needs access to all the items in order to reach the same commit/abort
+    // decision as the other warehouses. out_quantities is filled with stock quantities: 0 if the
+    // item is from another warehouse, or s_quantity if the item is from remote_warehouse.
+    virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
+            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities) {
+        assert(false);
+        return false;
+    }
+
 
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,

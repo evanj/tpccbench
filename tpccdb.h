@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include <cstring>
+#include <tr1/unordered_set>
 #include <vector>
 
 // Just a container for constants
@@ -353,6 +354,26 @@ public:
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
             NewOrderOutput* output) = 0;
+
+    // Executes the "home warehouse" portion of the new order transaction.
+    virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+            const std::vector<NewOrderItem>& items, const char* now,
+            NewOrderOutput* output) = 0;
+
+    // Executes the "remote warehouse" portion of the new order transaction. Modifies the stock
+    // for remote_warehouse. Needs access to all the items in order to reach the same commit/abort
+    // decision as the other warehouses. out_quantities is filled with stock quantities: 0 if the
+    // item is from another warehouse, or s_quantity if the item is from remote_warehouse.
+    virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
+            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities) = 0;
+
+    typedef std::tr1::unordered_set<int32_t> WarehouseSet;
+    static WarehouseSet newOrderRemoteWarehouses(int32_t home_warehouse,
+            const std::vector<NewOrderItem>& items);
+
+    // Combines the quantities from warehouse_id into output.
+    static void newOrderCombine(const std::vector<NewOrderItem>& items, int32_t warehouse_id,
+            const std::vector<int32_t>& remote_quantities, NewOrderOutput* output);
 
     // Executes the TPC-C payment transaction. Add h_amount to the customer's account.
     // See TPC-C 2.5 (page 32).
