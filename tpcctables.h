@@ -37,6 +37,13 @@ public:
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, const char* now,
             PaymentOutput* output);
+    virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
+            PaymentOutput* output);
+    virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output);
+    virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output);
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
             std::vector<DeliveryOrderInfo>* orders);
 
@@ -86,8 +93,8 @@ private:
     void internalOrderStatus(Customer* customer, OrderStatusOutput* output);
 
     // Implements payment transaction after the customer tuple has been located.
-    void internalPayment(int32_t warehouse_id, int32_t district_id, Customer* c, float h_amount,
-            const char* now, PaymentOutput* output);
+    void internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
+            float h_amount, PaymentOutput* output);
 
     // TODO: Use a data structure that supports deletes, appends, and sparse ranges.
     // Using a vector instead of a BPlusTree reduced the new order run time by 3.65us. This was an

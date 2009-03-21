@@ -9,3 +9,9 @@ A brief list of "cheats" in the TPC-C implementation:
 * For the delivery transaction, Dan and Stavros's prototype used a "lowest new order" counter for each warehouse/district. When delivery took one transaction, it incremented the counter. This totally works, and is very efficient, but I believe that it is cheating. 2.3.3 states "Each attribute must be obtained from the designated table in the transaction profiles." Since we can actually do this using a tree, this version will do the "real" thing.
 
 * Items table is an array. This does not support deletes, nor does it work if the table is "sparse." We should use some data structure which supports these operations.
+
+
+PARTITIONING:
+* We vertically partition stock and replicate s_data and s_dist_xx everywhere. The implementation currently does this by completely replicating stock. Worse than this, I don't think this scales: it is at least 28 MB of RAM on all nodes, per warehouse. I think using a two round transaction for this would be better, but it would be something that would be good to play with.
+
+* paymentLocal currently creates the history line. If it is doing a paymentByName, it creates it with an invalid c_id (0). To fix this, we need to vertically partition and replicate warehouse w_name and district d_name, then create the history line on the remote partition. Or vertically partition the history table, creating unique h_ids to join the pieces together again.

@@ -338,16 +338,19 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_wa
         PaymentOutput* output) {
     //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
     Customer* customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
-    internalPayment(warehouse_id, district_id, customer, h_amount, now, output);
+    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
+            now, output);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
 }
-
 
 void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
         int32_t c_district_id, const char* c_last, float h_amount, const char* now,
         PaymentOutput* output) {
     //~ printf("payment %d %d %d %d %s %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, c_last, h_amount, now);
     Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
-    internalPayment(warehouse_id, district_id, customer, h_amount, now, output);
+    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer->c_id, h_amount,
+            now, output);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
 }
 
 #define COPY_ADDRESS(src, dest, prefix) \
@@ -357,8 +360,36 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_wa
             src->prefix ## street_1, src->prefix ## street_2, src->prefix ## city, \
             src->prefix ## state, src->prefix ## zip)
 
-void TPCCTables::internalPayment(int32_t warehouse_id, int32_t district_id, Customer* c,
-        float h_amount, const char* now, PaymentOutput* output) {
+#define ZERO_ADDRESS(output, prefix) \
+    output->prefix ## street_1[0] = '\0'; \
+    output->prefix ## street_2[0] = '\0'; \
+    output->prefix ## city[0] = '\0'; \
+    output->prefix ## state[0] = '\0'; \
+    output->prefix ## zip[0] = '\0'
+
+static void zeroWarehouseDistrict(PaymentOutput* output) {
+    // Zero the warehouse and district data
+    // TODO: I should split this structure, but I'm lazy
+    ZERO_ADDRESS(output, w_);
+    ZERO_ADDRESS(output, d_);
+}
+
+void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+        int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output) {
+    Customer* customer = findCustomer(c_warehouse_id, c_district_id, c_id);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
+    zeroWarehouseDistrict(output);
+}
+void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+        int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output) {
+    Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output);
+    zeroWarehouseDistrict(output);
+}
+
+void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+        int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
+        PaymentOutput* output) {
     Warehouse* w = findWarehouse(warehouse_id);
     w->w_ytd += h_amount;
     COPY_ADDRESS(w, output, w_);
@@ -367,6 +398,36 @@ void TPCCTables::internalPayment(int32_t warehouse_id, int32_t district_id, Cust
     d->d_ytd += h_amount;
     COPY_ADDRESS(d, output, d_);
 
+    // Insert the line into the history table
+    History h;
+    h.h_w_id = warehouse_id;
+    h.h_d_id = district_id;
+    h.h_c_w_id = c_warehouse_id;
+    h.h_c_d_id = c_district_id;
+    h.h_c_id = customer_id;
+    h.h_amount = h_amount;
+    strcpy(h.h_date, now);
+    strcpy(h.h_data, w->w_name);
+    strcat(h.h_data, "    ");
+    strcat(h.h_data, d->d_name);
+    insertHistory(h);
+
+    // Zero all the customer fields: avoid uninitialized data for serialization
+    output->c_credit_lim = 0;
+    output->c_discount = 0;
+    output->c_balance = 0;
+    output->c_first[0] = '\0';
+    output->c_middle[0] = '\0';
+    output->c_last[0] = '\0';
+    ZERO_ADDRESS(output, c_);
+    output->c_phone[0] = '\0';
+    output->c_since[0] = '\0';
+    output->c_credit[0] = '\0';
+    output->c_data[0] = '\0';
+}
+
+void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
+        float h_amount, PaymentOutput* output) {
     c->c_balance -= h_amount;
     c->c_ytd_payment += h_amount;
     c->c_payment_cnt += 1;
@@ -397,30 +458,15 @@ void TPCCTables::internalPayment(int32_t warehouse_id, int32_t district_id, Cust
     COPY_STRING(output, c, c_first);
     COPY_STRING(output, c, c_middle);
     COPY_STRING(output, c, c_last);
-    //~ printf("copying address %s %s %s %s %s\n", c->c_street_1, c->c_street_2, c->c_city, c->c_state, c->c_zip);
     COPY_ADDRESS(c, output, c_);
-    //~ printf("dest address %s %s %s %s %s\n", output->c_street_1, output->c_street_2, output->c_city, output->c_state, output->c_zip);
     COPY_STRING(output, c, c_phone);
     COPY_STRING(output, c, c_since);
     COPY_STRING(output, c, c_credit);
     COPY_STRING(output, c, c_data);
 #undef COPY_STRING
-
-    // Insert the line into the history table
-    History h;
-    h.h_w_id = warehouse_id;
-    h.h_d_id = district_id;
-    h.h_c_w_id = c->c_w_id;
-    h.h_c_d_id = c->c_d_id;
-    h.h_c_id = c->c_id;
-    h.h_amount = h_amount;
-    strcpy(h.h_date, now);
-    strcpy(h.h_data, w->w_name);
-    strcat(h.h_data, "    ");
-    strcat(h.h_data, d->d_name);
-    insertHistory(h);
 }
 
+#undef ZERO_ADDRESS
 #undef COPY_ADDRESS
 
 // forward declaration for delivery

@@ -669,6 +669,38 @@ TEST_F(TPCCTablesTest, PaymentSuccess) {
     EXPECT_EQ(3, tables_.history().size());
 }
 
+TEST_F(TPCCTablesTest, PaymentRemote) {
+    makeWarehouse(W_ID);
+    makeDistrict(W_ID, D_ID, 22);
+    makeCustomer(W_ID-1, D_ID-1, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
+
+    PaymentOutput output;
+    tables_.paymentHome(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, NOW, &output);
+
+    // Verify that YTD has been incremented
+    EXPECT_EQ(123.45f, tables_.findWarehouse(W_ID)->w_ytd);
+    EXPECT_EQ(123.45f, tables_.findDistrict(W_ID, D_ID)->d_ytd);
+
+    // Warehouse and district data is complete; customer data is not
+    EXPECT_EQ(0, strcmp(STREET, output.w_street_1));
+    EXPECT_EQ(0, strlen(output.c_street_2));
+    EXPECT_EQ(0, output.c_balance);
+
+    // The customer has NOT been updated
+    EXPECT_EQ(0, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_payment_cnt);
+
+    // Remote payment
+    PaymentOutput out2;
+    tables_.paymentRemote(W_ID, D_ID, W_ID-1, D_ID-1, C_ID, 123.45f, &out2);
+    EXPECT_EQ(0, strlen(out2.w_street_1));
+
+    // customer has now been updated
+    EXPECT_EQ(1, tables_.findCustomer(W_ID-1, D_ID-1, C_ID)->c_payment_cnt);
+
+    TPCCDB::paymentCombine(out2, &output);
+    EXPECT_EQ(0, strcmp(STREET, output.c_street_2));
+}
+
 TEST_F(TPCCTablesTest, PaymentGoodCredit) {
     makeWarehouse(W_ID);
     makeDistrict(W_ID, D_ID, 22);

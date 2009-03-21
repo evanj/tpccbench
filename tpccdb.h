@@ -364,6 +364,8 @@ public:
     // for remote_warehouse. Needs access to all the items in order to reach the same commit/abort
     // decision as the other warehouses. out_quantities is filled with stock quantities: 0 if the
     // item is from another warehouse, or s_quantity if the item is from remote_warehouse.
+    // TODO: home_warehouse could be replaced with "bool is_remote", which would not need to be
+    // part of the RPC
     virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
             const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities) = 0;
 
@@ -386,6 +388,18 @@ public:
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, const char* now,
             PaymentOutput* output) = 0;
+
+    // TODO: See CHEATS: c_id is invalid for customer by last name transactions
+    virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
+            PaymentOutput* output) = 0;
+    virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output) = 0;
+    virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output) = 0;
+
+    // Combines results from paymentRemote in remote into the results from paymentHome in local.
+    static void paymentCombine(const PaymentOutput& remote, PaymentOutput* local);
 
     // Executes the TPC-C delivery transaction. Delivers the oldest undelivered transaction in each
     // district in warehouse_id. See TPC-C 2.7 (page 39).

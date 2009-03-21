@@ -59,3 +59,31 @@ void TPCCDB::newOrderCombine(const std::vector<NewOrderItem>& items, int32_t war
         }
     }
 }
+
+// TODO: These macros are copied from tpcctables.cc. Is there a way to share them?
+#define COPY_ADDRESS(src, dest, prefix) \
+    Address::copy( \
+            dest->prefix ## street_1, dest->prefix ## street_2, dest->prefix ## city, \
+            dest->prefix ## state, dest->prefix ## zip,\
+            src.prefix ## street_1, src.prefix ## street_2, src.prefix ## city, \
+            src.prefix ## state, src.prefix ## zip)
+
+#define COPY_STRING(dest, src, field) memcpy(dest->field, src.field, sizeof(src.field))
+
+// Copy the customer fields from remote into local
+void TPCCDB::paymentCombine(const PaymentOutput& remote, PaymentOutput* home) {
+    home->c_credit_lim = remote.c_credit_lim;
+    home->c_discount = remote.c_discount;
+    home->c_balance = remote.c_balance;
+    COPY_STRING(home, remote, c_first);
+    COPY_STRING(home, remote, c_middle);
+    COPY_STRING(home, remote, c_last);
+    COPY_ADDRESS(remote, home, c_);
+    COPY_STRING(home, remote, c_phone);
+    COPY_STRING(home, remote, c_since);
+    COPY_STRING(home, remote, c_credit);
+    COPY_STRING(home, remote, c_data);
+}
+
+#undef COPY_STRING
+#undef COPY_ADDRESS
