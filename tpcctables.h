@@ -48,7 +48,7 @@ public:
             int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
             TPCCUndo** undo);
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-            std::vector<DeliveryOrderInfo>* orders);
+            std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo);
     virtual bool hasWarehouse(int32_t warehouse_id) { return findWarehouse(warehouse_id) != NULL; }
     virtual void applyUndo(TPCCUndo* undo);
     virtual void freeUndo(TPCCUndo* undo) { assert(undo != NULL); delete undo; }

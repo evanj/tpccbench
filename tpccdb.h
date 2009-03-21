@@ -341,11 +341,19 @@ public:
     void save(District* d);
     void save(Customer* c);
     void save(Stock* s);
+    void save(Order* o);
+    void save(OrderLine* o);
 
     void inserted(const Order* o);
     void inserted(const OrderLine* ol);
     void inserted(const NewOrder* no);
     void inserted(const History* h);
+
+    void deleted(NewOrder* no);
+
+    // Marks this undo buffer as applied. This prevents the destructor from deleting tuples
+    // marked as deleted.
+    void applied();
 
     typedef std::tr1::unordered_map<Warehouse*, Warehouse*> WarehouseMap;
     const WarehouseMap& modified_warehouses() const { return modified_warehouses_; }
@@ -359,6 +367,12 @@ public:
     typedef std::tr1::unordered_map<Stock*, Stock*> StockMap;
     const StockMap& modified_stock() const { return modified_stock_; }
 
+    typedef std::tr1::unordered_map<Order*, Order*> OrderMap;
+    const OrderMap& modified_orders() const { return modified_orders_; }
+
+    typedef std::tr1::unordered_map<OrderLine*, OrderLine*> OrderLineMap;
+    const OrderLineMap& modified_order_lines() const { return modified_order_lines_; }
+
     typedef std::tr1::unordered_set<const Order*> OrderSet;
     const OrderSet& inserted_orders() const { return inserted_orders_; }
 
@@ -367,6 +381,8 @@ public:
 
     typedef std::tr1::unordered_set<const NewOrder*> NewOrderSet;
     const NewOrderSet& inserted_new_orders() const { return inserted_new_orders_; }
+    typedef std::tr1::unordered_set<NewOrder*> NewOrderDeletedSet;
+    const NewOrderDeletedSet& deleted_new_orders() const { return deleted_new_orders_; }
 
     typedef std::tr1::unordered_set<const History*> HistorySet;
     const HistorySet& inserted_history() const { return inserted_history_; }
@@ -376,11 +392,15 @@ private:
     DistrictMap modified_districts_;
     CustomerMap modified_customers_;
     StockMap modified_stock_;
+    OrderMap modified_orders_;
+    OrderLineMap modified_order_lines_;
 
     OrderSet inserted_orders_;
     OrderLineSet inserted_order_lines_;
     NewOrderSet inserted_new_orders_;
     HistorySet inserted_history_;
+
+    NewOrderDeletedSet deleted_new_orders_;
 };
 
 // Interface to the TPC-C transaction implementation.
@@ -389,6 +409,8 @@ private:
 // the database, then a TPCCUndo structure will either be allocated or extended. This structure can
 // then be passed to applyUndo() to undo the effects of the transaction, or to freeUndo() to
 // deallocate it. If *undo is NULL, that means the transaction did not modify the database.
+//
+// NOTE: stockLevel and orderStatus are read-only, and thus don't need undo.
 class TPCCDB {
 public:
     virtual ~TPCCDB() {}
@@ -468,7 +490,7 @@ public:
     // Executes the TPC-C delivery transaction. Delivers the oldest undelivered transaction in each
     // district in warehouse_id. See TPC-C 2.7 (page 39).
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-            std::vector<DeliveryOrderInfo>* orders) = 0;
+            std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) = 0;
 
     // Returns true if warehouse_id is present on this partition.
     virtual bool hasWarehouse(int32_t warehouse_id) = 0;

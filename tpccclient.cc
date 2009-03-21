@@ -67,7 +67,7 @@ void TPCCClient::doDelivery() {
     clock_->getDateTimestamp(now);
 
     vector<DeliveryOrderInfo> orders;
-    db_->delivery(generateWarehouse(), carrier, now, &orders);
+    db_->delivery(generateWarehouse(), carrier, now, &orders, NULL);
     if (orders.size() != District::NUM_PER_WAREHOUSE) {
         printf("Only delivered from %zd districts\n", orders.size());
     }

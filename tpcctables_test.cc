@@ -782,14 +782,14 @@ TEST_F(TPCCTablesTest, PaymentUndo) {
 
 TEST_F(TPCCTablesTest, DeliveryNoOrders) {
     vector<DeliveryOrderInfo> orders;
-    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders);
+    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders, NULL);
     EXPECT_EQ(0, orders.size());
 }
 
 TEST_F(TPCCTablesTest, DeliveryClear) {
     // The delivery function should clear the output of previous data
     vector<DeliveryOrderInfo> orders(1);
-    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders);
+    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders, NULL);
     EXPECT_EQ(0, orders.size());
 }
 
@@ -806,7 +806,7 @@ TEST_F(TPCCTablesTest, Delivery) {
     tables_.insertNewOrder(W_ID, D_ID, 2);
 
     vector<DeliveryOrderInfo> orders;
-    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders);
+    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders, NULL);
 
     ASSERT_EQ(2, orders.size());
     EXPECT_EQ(D_ID-1, orders[0].d_id);
@@ -844,12 +844,39 @@ TEST_F(TPCCTablesTest, DeliveryTwoWarehouses) {
     }
 
     vector<DeliveryOrderInfo> orders;
-    tables_.delivery(W_ID-1, CARRIER_ID, NOW, &orders);
+    tables_.delivery(W_ID-1, CARRIER_ID, NOW, &orders, NULL);
     EXPECT_EQ(1, orders.size());
-    tables_.delivery(W_ID-1, CARRIER_ID, NOW, &orders);
+    tables_.delivery(W_ID-1, CARRIER_ID, NOW, &orders, NULL);
     EXPECT_EQ(1, orders.size());
-    tables_.delivery(W_ID-1, CARRIER_ID, NOW, &orders);
+    tables_.delivery(W_ID-1, CARRIER_ID, NOW, &orders, NULL);
     EXPECT_EQ(0, orders.size());
+}
+
+TEST_F(TPCCTablesTest, DeliveryUndo) {
+    makeCustomer(W_ID, D_ID, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
+    makeCustomer(W_ID, D_ID-1, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
+    tables_.insertNewOrder(W_ID, D_ID, 1);
+    makeOrder(W_ID, D_ID, 1, C_ID, 1);
+    makeOrderLine(W_ID, D_ID, 1, 1, 42);
+
+    vector<DeliveryOrderInfo> orders;
+    tables_.delivery(W_ID, CARRIER_ID, NOW, &orders, &undo_);
+    EXPECT_TRUE(undo_ != NULL);
+    tables_.applyUndo(undo_);
+
+    // Make sure the database did not change.
+    NewOrder* neworder = tables_.findNewOrder(W_ID, D_ID, 1);
+    EXPECT_EQ(1, neworder->no_o_id);
+
+    Order* o = tables_.findOrder(W_ID, D_ID, 1);
+    EXPECT_EQ(Order::NULL_CARRIER_ID, o->o_carrier_id);
+
+    OrderLine* line = tables_.findOrderLine(W_ID, D_ID, 1, 1);
+    EXPECT_EQ(0, strlen(line->ol_delivery_d));
+
+    Customer* c = tables_.findCustomer(W_ID, D_ID, C_ID);
+    EXPECT_EQ(CUSTOMER_BALANCE, c->c_balance);
+    EXPECT_EQ(0, c->c_delivery_cnt);
 }
 
 int main() {

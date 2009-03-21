@@ -515,8 +515,11 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
 static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id);
 
 void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-        std::vector<DeliveryOrderInfo>* orders) {
+        std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) {
     //~ printf("delivery %d %d %s\n", warehouse_id, carrier_id, now);
+    if (undo != NULL && *undo == NULL) {
+        *undo = new TPCCUndo();
+    }
     orders->clear();
     for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; ++d_id) {
         // Find and remove the lowest numbered order for the district
@@ -535,7 +538,11 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
         assert(neworder->no_d_id == d_id && neworder->no_w_id == warehouse_id);
         int32_t o_id = neworder->no_o_id;
         neworders_.erase(iterator);
-        delete neworder;
+        if (undo != NULL) {
+            (*undo)->deleted(neworder);
+        } else {
+            delete neworder;
+        }
 
         DeliveryOrderInfo order;
         order.d_id = d_id;
@@ -544,12 +551,14 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
 
         Order* o = findOrder(warehouse_id, d_id, o_id);
         assert(o->o_carrier_id == Order::NULL_CARRIER_ID);
+        if (undo != NULL) (*undo)->save(o);
         o->o_carrier_id = carrier_id;
 
         float total = 0;
         // TODO: Select based on (w_id, d_id, o_id) rather than using ol_number?
         for (int32_t i = 1; i <= o->o_ol_cnt; ++i) {
             OrderLine* line = findOrderLine(warehouse_id, d_id, o_id, i);
+            if (undo != NULL) (*undo)->save(line);
             assert(0 == strlen(line->ol_delivery_d));
             strcpy(line->ol_delivery_d, now);
             assert(strlen(line->ol_delivery_d) == DATETIME_SIZE);
@@ -557,6 +566,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
         }
 
         Customer* c = findCustomer(warehouse_id, d_id, o->o_c_id);
+        if (undo != NULL) (*undo)->save(c);
         c->c_balance += total;
         c->c_delivery_cnt += 1;
     }
@@ -579,17 +589,36 @@ static void eraseTuple(const T& set, TPCCTables* tables,
     }
 }
 
+// Used by both applyUndo and insertNewOrder to put allocated NewOrder tuples in the map.
+static NewOrder* insertNewOrderObject(std::map<int64_t, NewOrder*>* map, NewOrder* neworder) {
+    int64_t key = makeNewOrderKey(neworder->no_w_id, neworder->no_d_id, neworder->no_o_id);
+    assert(map->find(key) == map->end());
+    map->insert(std::make_pair(key, neworder));
+    return neworder;
+}
+
 void TPCCTables::applyUndo(TPCCUndo* undo) {
     restoreFromMap(undo->modified_warehouses());
     restoreFromMap(undo->modified_districts());
     restoreFromMap(undo->modified_customers());
     restoreFromMap(undo->modified_stock());
+    restoreFromMap(undo->modified_orders());
+    restoreFromMap(undo->modified_order_lines());
 
     eraseTuple(undo->inserted_orders(), this, &TPCCTables::eraseOrder);
     eraseTuple(undo->inserted_order_lines(), this, &TPCCTables::eraseOrderLine);
     eraseTuple(undo->inserted_new_orders(), this, &TPCCTables::eraseNewOrder);
     eraseTuple(undo->inserted_history(), this, &TPCCTables::eraseHistory);
 
+    // Transfer deleted new orders back to the database
+    for (TPCCUndo::NewOrderDeletedSet::const_iterator i = undo->deleted_new_orders().begin();
+            i != undo->deleted_new_orders().end();
+            ++i) {
+        NewOrder* neworder = *i;
+        insertNewOrderObject(&neworders_, neworder);
+    }
+
+    undo->applied();
     delete undo;
 }
 
@@ -837,11 +866,9 @@ NewOrder* TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     neworder->no_d_id = d_id;
     neworder->no_o_id = o_id;
 
-    int64_t key = makeNewOrderKey(neworder->no_w_id, neworder->no_d_id, neworder->no_o_id);
-    assert(neworders_.find(key) == neworders_.end());
-    neworders_.insert(std::make_pair(key, neworder));
-    return neworder;
+    return insertNewOrderObject(&neworders_, neworder);
 }
+
 NewOrder* TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     NewOrderMap::const_iterator it = neworders_.find(makeNewOrderKey(w_id, d_id, o_id));
     if (it == neworders_.end()) return NULL;

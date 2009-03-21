@@ -52,9 +52,8 @@ public:
         now_ = now;
 
         // when newOrder aborts, it doesn't have an undo buffer
-        if (undo != NULL && new_order_committed_) {
-            *undo = (TPCCUndo*) this;
-            undo_count_ += 1;
+        if (new_order_committed_) {
+            setUndo(undo);
         }
 
         output->d_tax = 42;
@@ -69,9 +68,8 @@ public:
         items_ = items;
 
         // when newOrder aborts, it doesn't have an undo buffer
-        if (undo != NULL && new_order_committed_) {
-            *undo = (TPCCUndo*) this;
-            undo_count_ += 1;
+        if (new_order_committed_) {
+            setUndo(undo);
         }
 
         out_quantities->push_back(42);
@@ -81,47 +79,48 @@ public:
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
             PaymentOutput* output, TPCCUndo** undo) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        c_w_id_ = c_warehouse_id;
-        c_d_id_ = c_district_id;
-        c_id_ = customer_id;
-        h_amount_ = h_amount;
-        now_ = now;
-        setPaymentOutput(output);
+        paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
+                now, output, undo);
     }
 
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, const char* now,
             PaymentOutput* output, TPCCUndo** undo) {
-        w_id_ = warehouse_id;
-        d_id_ = district_id;
-        c_w_id_ = c_warehouse_id;
-        c_d_id_ = c_district_id;
         c_last_ = c_last;
-        h_amount_ = h_amount;
-        now_ = now;
-        setPaymentOutput(output);
+        paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, 0, h_amount,
+                now, output, undo);
     }
 
     virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
             PaymentOutput* output, TPCCUndo** undo) {
-        assert(false);
+        w_id_ = warehouse_id;
+        d_id_ = district_id;
+        c_w_id_ = c_warehouse_id;
+        c_d_id_ = c_district_id;
+        c_id_ = c_id;
+        h_amount_ = h_amount;
+        now_ = now;
+        setPaymentOutput(output);
+        setUndo(undo);
     }
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
             TPCCUndo** undo) {
-        assert(false);
+        paymentRemote(warehouse_id, district_id, c_warehouse_id, c_district_id, "", h_amount,
+                output, undo);
     }
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
             TPCCUndo** undo) {
-        assert(false);
+        // NULL terminate everything to avoid valgrind warnings
+        memset(output, 0, sizeof(*output));
+        w_id_ = warehouse_id;
+        setUndo(undo);
     }
 
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-            std::vector<DeliveryOrderInfo>* orders) {
+            std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) {
         w_id_ = warehouse_id;
         delivery_carrier_id_ = carrier_id;
         now_ = now;
@@ -129,6 +128,7 @@ public:
         orders->resize(1);
         (*orders)[0].d_id = 1;
         (*orders)[0].o_id = 42;
+        setUndo(undo);
     }
 
     virtual bool hasWarehouse(int32_t warehouse_id) {
@@ -163,6 +163,13 @@ public:
     int undo_count_;
 
 private:
+    void setUndo(TPCCUndo** undo) {
+        if (undo != NULL) {
+            *undo = (TPCCUndo*) this;
+            undo_count_ += 1;
+        }
+    }
+
     void setOrderOutput(OrderStatusOutput* output) {
         output->c_balance = 1.23f;
         // Null terminate to avoid uninitialized data warnings

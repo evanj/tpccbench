@@ -41,6 +41,9 @@ TPCCUndo::~TPCCUndo() {
     STLDeleteValues(&modified_districts_);
     STLDeleteValues(&modified_customers_);
     STLDeleteValues(&modified_stock_);
+    STLDeleteValues(&modified_orders_);
+    STLDeleteValues(&modified_order_lines_);
+    STLDeleteElements(&deleted_new_orders_);
 }
 
 template <typename T>
@@ -69,6 +72,12 @@ void TPCCUndo::save(Customer* c) {
 void TPCCUndo::save(Stock* s) {
     copyIfNeeded(&modified_stock_, s);
 }
+void TPCCUndo::save(Order* o) {
+    copyIfNeeded(&modified_orders_, o);
+}
+void TPCCUndo::save(OrderLine* ol) {
+    copyIfNeeded(&modified_order_lines_, ol);
+}
 
 void TPCCUndo::inserted(const Order* o) {
     assert(inserted_orders_.find(o) == inserted_orders_.end());
@@ -85,6 +94,14 @@ void TPCCUndo::inserted(const NewOrder* no) {
 void TPCCUndo::inserted(const History* h) {
     assert(inserted_history_.find(h) == inserted_history_.end());
     inserted_history_.insert(h);
+}
+void TPCCUndo::deleted(NewOrder* no) {
+    assert(deleted_new_orders_.find(no) == deleted_new_orders_.end());
+    deleted_new_orders_.insert(no);
+}
+
+void TPCCUndo::applied() {
+    deleted_new_orders_.clear();
 }
 
 TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(int32_t home_warehouse,
