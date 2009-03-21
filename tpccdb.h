@@ -2,6 +2,8 @@
 #define TPCCDB_H__
 
 #include <stdint.h>
+
+#include <cstring>
 #include <vector>
 
 struct Item {
@@ -250,6 +252,14 @@ struct NewOrderItem {
 };
 
 struct NewOrderOutput {
+    // Zero initialize everything. This avoids copying uninitialized data around when
+    // serializing/deserializing.
+    NewOrderOutput() : w_tax(0), d_tax(0), o_id(0), c_discount(0), total(0) {
+        memset(c_last, 0, sizeof(c_last));
+        memset(c_credit, 0, sizeof(c_credit));
+        memset(status, 0, sizeof(status));
+    }
+
     float w_tax;
     float d_tax;
 

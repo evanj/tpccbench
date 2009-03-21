@@ -454,6 +454,9 @@ TEST_F(TPCCTablesTest, NewOrderBadItem) {
     EXPECT_EQ(0, strcmp(CUSTOMER_LAST, output.c_last));
     EXPECT_EQ(0, strcmp(Customer::BAD_CREDIT, output.c_credit));
     EXPECT_EQ(0, strcmp(NewOrderOutput::INVALID_ITEM_STATUS, output.status));
+
+    // Verify that unused fields are initialized. Otherwise serialization/deserialization sucks.
+    EXPECT_EQ(0, output.w_tax);
 }
 
 TEST_F(TPCCTablesTest, NewOrderSuccess) {
