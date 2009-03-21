@@ -1,9 +1,12 @@
 WARNINGS = -Werror -Wall -Wextra -Wconversion -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Woverloaded-virtual -Wno-sign-compare -Wno-unused-parameter
 
+# gcc flags used for both debug and opt builds
+BASE_CXX_FLAGS := -MD -I.. $(CXXFLAGS) $(WARNINGS)
+
 # Debug flags
-CXXFLAGS = -g -MD $(WARNINGS) -I..
+CXXFLAGS = -g $(BASE_CXX_FLAGS)
 # Optimization flags
-#CXXFLAGS = -g -O3 -DNDEBUG -MD $(WARNINGS)
+#CXXFLAGS = -g -O3 -DNDEBUG $(BASE_CXX_FLAGS)
 
 # Link withthe C++ standard library
 LDFLAGS=-lstdc++
@@ -20,6 +23,6 @@ tpccgenerator_test: tpccgenerator_test.o tpccgenerator.o tpcctables.o tpccdb.o r
 tpcc: tpcc.o tpccclient.o tpccgenerator.o tpcctables.o tpccdb.o clock.o randomgenerator.o stupidunit.o
 
 clean :
-	rm -f *.o *.d $(BINARIES)
+	$(RM) *.o *.d $(BINARIES)
 
 -include *.d

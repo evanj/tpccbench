@@ -65,7 +65,7 @@ TEST_F(BTreeTest, FindLastLessThan) {
     EXPECT_FALSE(tree_.findLastLessThan(52));
 
     // This works
-    int out_key;
+    int out_key = 0;
     EXPECT_TRUE(tree_.findLastLessThan(100, &output_, &out_key));
     EXPECT_EQ(1, output_);
     EXPECT_EQ(52, out_key);
