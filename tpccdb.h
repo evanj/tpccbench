@@ -312,7 +312,7 @@ public:
 
     // Executes the TPC-C "slev" transaction. From the last 20 orders, returns the number of rows in
     // the STOCK table that have S_QUANTITY < threshold. See TPC-C 2.8 (page 43).
-    virtual int stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) = 0;
+    virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) = 0;
 
     // Executes the TPC-C order status transaction. Find the customer's last order and check the
     // delivery date of each item on the order. See TPC-C 2.6 (page 36).

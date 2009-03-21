@@ -50,7 +50,7 @@ TPCCTables::~TPCCTables() {
     STLDeleteElements(&history_);
 }
 
-int TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
+int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
     /* EXEC SQL SELECT d_next_o_id INTO :o_id FROM district
         WHERE d_w_id=:w_id AND d_id=:d_id; */
     //~ printf("stock level %d %d %d\n", warehouse_id, district_id, threshold);
