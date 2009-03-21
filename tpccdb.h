@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include <cstring>
+#include <tr1/unordered_map>
 #include <tr1/unordered_set>
 #include <vector>
 
@@ -330,7 +331,49 @@ struct DeliveryOrderInfo {
     int32_t o_id;
 };
 
+// Contains data required to undo transactions. Note that only new order, payment, and delivery
+// update the database. This structure only contains information to undo these transactions.
+class TPCCUndo {
+public:
+    ~TPCCUndo();
+
+    void save(District* d);
+    void save(Stock* s);
+
+    void inserted(const Order* o);
+    void inserted(const OrderLine* ol);
+    void inserted(const NewOrder* no);
+
+    typedef std::tr1::unordered_map<District*, District*> DistrictMap;
+    const DistrictMap& modified_districts() const { return modified_districts_; }
+
+    typedef std::tr1::unordered_map<Stock*, Stock*> StockMap;
+    const StockMap& modified_stock() const { return modified_stock_; }
+
+    typedef std::tr1::unordered_set<const Order*> OrderSet;
+    const OrderSet& inserted_orders() const { return inserted_orders_; }
+
+    typedef std::tr1::unordered_set<const OrderLine*> OrderLineSet;
+    const OrderLineSet& inserted_order_lines() const { return inserted_order_lines_; }
+
+    typedef std::tr1::unordered_set<const NewOrder*> NewOrderSet;
+    const NewOrderSet& inserted_new_orders() const { return inserted_new_orders_; }
+
+private:
+    DistrictMap modified_districts_;
+    StockMap modified_stock_;
+
+    OrderSet inserted_orders_;
+    OrderLineSet inserted_order_lines_;
+    NewOrderSet inserted_new_orders_;
+};
+
 // Interface to the TPC-C transaction implementation.
+//
+// Undoing transactions: If the TPCCUndo** undo parameter is not null, and the transaction modifies
+// the database, then a TPCCUndo structure will either be allocated or extended. This structure can
+// then be passed to applyUndo() to undo the effects of the transaction, or to freeUndo() to
+// deallocate it. If *undo is NULL, that means the transaction did not modify the database.
 class TPCCDB {
 public:
     virtual ~TPCCDB() {}
@@ -353,12 +396,12 @@ public:
     // database. See TPC-C 2.4 (page 27). Returns true if the transaction commits.
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output) = 0;
+            NewOrderOutput* output, TPCCUndo** undo) = 0;
 
     // Executes the "home warehouse" portion of the new order transaction.
     virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output) = 0;
+            NewOrderOutput* output, TPCCUndo** undo) = 0;
 
     // Executes the "remote warehouse" portion of the new order transaction. Modifies the stock
     // for remote_warehouse. Needs access to all the items in order to reach the same commit/abort
@@ -367,7 +410,8 @@ public:
     // TODO: home_warehouse could be replaced with "bool is_remote", which would not need to be
     // part of the RPC
     virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
-            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities) = 0;
+            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities,
+            TPCCUndo** undo) = 0;
 
     typedef std::tr1::unordered_set<int32_t> WarehouseSet;
     static WarehouseSet newOrderRemoteWarehouses(int32_t home_warehouse,
@@ -401,8 +445,8 @@ public:
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output) = 0;
 
-    // Combines results from paymentRemote in remote into the results from paymentHome in local.
-    static void paymentCombine(const PaymentOutput& remote, PaymentOutput* local);
+    // Combines results from paymentRemote in remote into the results from paymentHome in home.
+    static void paymentCombine(const PaymentOutput& remote, PaymentOutput* home);
 
     // Executes the TPC-C delivery transaction. Delivers the oldest undelivered transaction in each
     // district in warehouse_id. See TPC-C 2.7 (page 39).
@@ -411,6 +455,12 @@ public:
 
     // Returns true if warehouse_id is present on this partition.
     virtual bool hasWarehouse(int32_t warehouse_id) = 0;
+
+    // Applies the undo buffer to undo the writes of a transaction.
+    virtual void applyUndo(TPCCUndo* undo) = 0;
+
+    // Frees the undo buffer in undo.
+    virtual void freeUndo(TPCCUndo* undo) = 0;
 };
 
 #endif

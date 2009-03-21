@@ -1,5 +1,6 @@
 #include <cassert>
 
+#include "stlutil.h"
 #include "tpccdb.h"
 
 void Address::copy(char* street1, char* street2, char* city, char* state, char* zip,
@@ -34,6 +35,45 @@ const float OrderLine::MIN_AMOUNT;
 const float OrderLine::MAX_AMOUNT;
 const char NewOrderOutput::INVALID_ITEM_STATUS[] = "Item number is not valid";
 const float History::INITIAL_AMOUNT;
+
+TPCCUndo::~TPCCUndo() {
+    STLDeleteValues(&modified_districts_);
+    STLDeleteValues(&modified_stock_);
+}
+
+template <typename T>
+static void copyIfNeeded(typename std::tr1::unordered_map<T*, T*>* map, T* source) {
+    typedef typename std::tr1::unordered_map<T*, T*> MapType;
+    std::pair<typename MapType::iterator, bool> result = map->insert(
+            typename MapType::value_type(source, NULL));
+    if (result.second) {
+        // we did the insert: copy the value
+        assert(result.first->second == NULL);
+        result.first->second = new T(*source);
+    } else {
+        assert(result.first->second != NULL);
+    }    
+}
+
+void TPCCUndo::save(District* d) {
+    copyIfNeeded(&modified_districts_, d);
+}
+void TPCCUndo::save(Stock* s) {
+    copyIfNeeded(&modified_stock_, s);
+}
+
+void TPCCUndo::inserted(const Order* o) {
+    assert(inserted_orders_.find(o) == inserted_orders_.end());
+    inserted_orders_.insert(o);
+}
+void TPCCUndo::inserted(const OrderLine* ol) {
+    assert(inserted_order_lines_.find(ol) == inserted_order_lines_.end());
+    inserted_order_lines_.insert(ol);
+}
+void TPCCUndo::inserted(const NewOrder* no) {
+    assert(inserted_new_orders_.find(no) == inserted_new_orders_.end());
+    inserted_new_orders_.insert(no);
+}
 
 TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(int32_t home_warehouse,
         const std::vector<NewOrderItem>& items) {

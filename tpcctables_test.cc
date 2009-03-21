@@ -54,7 +54,9 @@ static const char D_NAME[] = "dname";
 static const char STREET[Address::MAX_STREET+1] = "maxstreet01234567890";
 
 class TPCCTablesTest : public Test {
-protected:
+public:
+    TPCCTablesTest() : undo_(NULL) {}
+
     static const int32_t W_ID = Warehouse::MAX_WAREHOUSE_ID;
     static const int32_t D_ID = 2;
     static const int32_t C_ID = 3;
@@ -159,8 +161,28 @@ protected:
         tables_.insertItem(item);
     }
 
+    // Sets up a database and parameters for a successful call to new order.
+    void makeNewOrderSuccess(vector<NewOrderItem>* items) {
+        makeWarehouse(W_ID);
+        makeDistrict(W_ID, D_ID, 22);
+        makeCustomer(W_ID, D_ID, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
+        makeItem(1);
+        makeItem(2);
+        makeStock(W_ID, 1, 18, true);
+        makeStock(W_ID-1, 2, 19, false);
+
+        items->resize(2);
+        (*items)[0].i_id = 1;
+        (*items)[0].ol_supply_w_id = W_ID;
+        (*items)[0].ol_quantity = 9;
+        (*items)[1].i_id = 2;
+        (*items)[1].ol_supply_w_id = W_ID-1;
+        (*items)[1].ol_quantity = 9;
+    }
+
     OrderStatusOutput order_status_output_;
     TPCCTables tables_;
+    TPCCUndo* undo_;
 };
 // Non-integral constants must be defined in a .cc file. Needed for Mac OS X.
 // http://www.research.att.com/~bs/bs_faq2.html#in-class
@@ -450,8 +472,10 @@ TEST_F(TPCCTablesTest, NewOrderBadItem) {
     makeDistrict(W_ID, D_ID, 22);
     makeCustomer(W_ID, D_ID, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
     NewOrderOutput output;
-    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output);
+    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output, &undo_);
     EXPECT_FALSE(success);
+    EXPECT_TRUE(undo_ == NULL);  // no undo allocated: no modifications!
+
     EXPECT_EQ(22, output.o_id);
     EXPECT_EQ(0, strcmp(CUSTOMER_LAST, output.c_last));
     EXPECT_EQ(0, strcmp(Customer::BAD_CREDIT, output.c_credit));
@@ -462,25 +486,13 @@ TEST_F(TPCCTablesTest, NewOrderBadItem) {
 }
 
 TEST_F(TPCCTablesTest, NewOrderSuccess) {
-    makeWarehouse(W_ID);
-    makeDistrict(W_ID, D_ID, 22);
-    makeCustomer(W_ID, D_ID, C_ID, CUSTOMER_LAST, CUSTOMER_FIRST);
-    makeItem(1);
-    makeItem(2);
-    makeStock(W_ID, 1, 18, true);
-    makeStock(W_ID-1, 2, 19, false);
-
-    vector<NewOrderItem> items(2);
-    items[0].i_id = 1;
-    items[0].ol_supply_w_id = W_ID;
-    items[0].ol_quantity = 9;
-    items[1].i_id = 2;
-    items[1].ol_supply_w_id = W_ID-1;
-    items[1].ol_quantity = 9;
-    struct NewOrderOutput output;
-    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output);
-
+    vector<NewOrderItem> items;
+    makeNewOrderSuccess(&items);
+    NewOrderOutput output;
+    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output, &undo_);
     EXPECT_TRUE(success);
+    EXPECT_TRUE(undo_ != NULL);
+
     EXPECT_EQ(W_TAX, output.w_tax);
     EXPECT_EQ(D_TAX, output.d_tax);
     EXPECT_EQ(22, output.o_id);
@@ -541,6 +553,8 @@ TEST_F(TPCCTablesTest, NewOrderSuccess) {
     EXPECT_EQ(9*ITEM_PRICE, line->ol_amount);
     EXPECT_EQ(0, strlen(line->ol_delivery_d));
     EXPECT_EQ(0, strcmp(STOCK_DIST, line->ol_dist_info));
+
+    tables_.freeUndo(undo_);
 }
 
 TEST_F(TPCCTablesTest, NewOrderPartitionSuccess) {
@@ -560,7 +574,7 @@ TEST_F(TPCCTablesTest, NewOrderPartitionSuccess) {
     items[1].ol_supply_w_id = W_ID-1;
     items[1].ol_quantity = 9;
     struct NewOrderOutput output;
-    bool success = tables_.newOrderHome(W_ID, D_ID, C_ID, items, NOW, &output);
+    bool success = tables_.newOrderHome(W_ID, D_ID, C_ID, items, NOW, &output, NULL);
     EXPECT_TRUE(success);
 
     ASSERT_EQ(2, output.items.size());
@@ -584,7 +598,7 @@ TEST_F(TPCCTablesTest, NewOrderPartitionSuccess) {
 
     // Execute the remote part
     vector<int32_t> remote_quantities;
-    success = tables_.newOrderRemote(W_ID, W_ID-1, items, &remote_quantities);
+    success = tables_.newOrderRemote(W_ID, W_ID-1, items, &remote_quantities, NULL);
     EXPECT_TRUE(success);
 
     // Remote warehouse item is updated
@@ -610,11 +624,37 @@ TEST_F(TPCCTablesTest, NewOrderAllLocal) {
     items[0].ol_supply_w_id = W_ID;
     items[0].ol_quantity = 9;
     struct NewOrderOutput output;
-    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output);
+    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output, NULL);
 
     EXPECT_TRUE(success);
     Order* o = tables_.findOrder(W_ID, D_ID, 22);
     EXPECT_EQ(1, o->o_all_local);
+}
+
+TEST_F(TPCCTablesTest, NewOrderUndo) {
+    // TODO: Reduce some of this duplication with NewOrderSuccess and NewOrderPartitionSuccess?
+    vector<NewOrderItem> items;
+    makeNewOrderSuccess(&items);
+    NewOrderOutput output;
+    bool success = tables_.newOrder(W_ID, D_ID, C_ID, items, NOW, &output, &undo_);
+    EXPECT_TRUE(success);
+
+    // The transaction should have modified the database
+    EXPECT_EQ(23, tables_.findDistrict(W_ID, D_ID)->d_next_o_id);
+
+    // Undo the transaction: everything should be back the way it was
+    tables_.applyUndo(undo_);
+    EXPECT_EQ(22, tables_.findDistrict(W_ID, D_ID)->d_next_o_id);
+
+    Stock* s = tables_.findStock(W_ID, 1);
+    EXPECT_EQ(0, s->s_order_cnt);
+    s = tables_.findStock(W_ID-1, 2);
+    EXPECT_EQ(0, s->s_order_cnt);
+
+    EXPECT_EQ(NULL, tables_.findOrder(W_ID, D_ID, 22));
+    EXPECT_EQ(NULL, tables_.findNewOrder(W_ID, D_ID, 22));
+    EXPECT_EQ(NULL, tables_.findOrderLine(W_ID, D_ID, 22, 1));
+    EXPECT_EQ(NULL, tables_.findOrderLine(W_ID, D_ID, 22, 2));
 }
 
 TEST_F(TPCCTablesTest, PaymentSuccess) {

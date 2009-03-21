@@ -137,7 +137,8 @@ bool TPCCClient::doNewOrder() {
     char now[Clock::DATETIME_SIZE+1];
     clock_->getDateTimestamp(now);
     NewOrderOutput output;
-    bool result = db_->newOrder(w_id, generateDistrict(), generateCID(), items, now, &output);
+    bool result = db_->newOrder(
+            w_id, generateDistrict(), generateCID(), items, now, &output, NULL);
     assert(result == !rollback);
     return result;
 }

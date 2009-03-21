@@ -25,12 +25,13 @@ public:
             OrderStatusOutput* output);
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output);
+            NewOrderOutput* output, TPCCUndo** undo);
     virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output);
+            NewOrderOutput* output, TPCCUndo** undo);
     virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
-            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities);
+            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities,
+            TPCCUndo** undo);
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
             int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
             PaymentOutput* output);
@@ -47,7 +48,9 @@ public:
     virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
             std::vector<DeliveryOrderInfo>* orders);
     virtual bool hasWarehouse(int32_t warehouse_id) { return findWarehouse(warehouse_id) != NULL; }
-
+    virtual void applyUndo(TPCCUndo* undo);
+    virtual void freeUndo(TPCCUndo* undo) { assert(undo != NULL); delete undo; }
+    
     void reserveItems(int size) { items_.reserve(size); }
     // Copies item into the item table.
     void insertItem(const Item& item);
@@ -67,14 +70,17 @@ public:
     // Finds all customers that match (w_id, d_id, *, c_last), taking the n/2th one (rounded up).
     Customer* findCustomerByName(int32_t w_id, int32_t d_id, const char* c_last);
 
-    void insertOrder(const Order& order);
+    // Stores order in the database. Returns a pointer to the database's tuple.
+    Order* insertOrder(const Order& order);
     Order* findOrder(int32_t w_id, int32_t d_id, int32_t o_id);
     Order* findLastOrderByCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
 
-    void insertOrderLine(const OrderLine& orderline);
+    // Stores orderline in the database. Returns a pointer to the database's tuple.
+    OrderLine* insertOrderLine(const OrderLine& orderline);
     OrderLine* findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number);
 
-    void insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
+    // Creates a new order in the database. Returns a pointer to the database's tuple.
+    NewOrder* insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
     NewOrder* findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
 
     const std::vector<const History*>& history() const { return history_; }
@@ -96,6 +102,13 @@ private:
     // Implements payment transaction after the customer tuple has been located.
     void internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
             float h_amount, PaymentOutput* output);
+
+    // Erases order from the database. NOTE: This is only "permitted" when undoing a transaction.
+    void eraseOrder(const Order* order);
+    // Erases order_line from the database. NOTE: This is only "permitted" when undoing a transaction.
+    void eraseOrderLine(const OrderLine* order_line);
+    // Erases new_order from the database. NOTE: This is only "permitted" when undoing a transaction.
+    void eraseNewOrder(const NewOrder* new_order);
 
     // TODO: Use a data structure that supports deletes, appends, and sparse ranges.
     // Using a vector instead of a BPlusTree reduced the new order run time by 3.65us. This was an

@@ -38,7 +38,7 @@ public:
 
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output) {
+            NewOrderOutput* output, TPCCUndo** undo) {
         w_id_ = warehouse_id;
         d_id_ = district_id;
         c_id_ = customer_id;
@@ -51,13 +51,14 @@ public:
 
     virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
             const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output) {
+            NewOrderOutput* output, TPCCUndo** undo) {
         assert(false);
         return false;
     }
 
     virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
-            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities) {
+            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities,
+            TPCCUndo** undo) {
         assert(false);
         return false;
     }
@@ -114,6 +115,8 @@ public:
     }
 
     virtual bool hasWarehouse(int32_t warehouse_id) { assert(false); return false; }
+    virtual void applyUndo(TPCCUndo* undo) { assert(false); }
+    virtual void freeUndo(TPCCUndo* undo) { assert(false); }
 
     int32_t w_id_;
     int32_t d_id_;
