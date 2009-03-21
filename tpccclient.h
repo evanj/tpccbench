@@ -24,7 +24,7 @@ public:
     void doOrderStatus();
     void doDelivery();
     void doPayment();
-    void doNewOrder();
+    bool doNewOrder();
 
     void doOne();
 

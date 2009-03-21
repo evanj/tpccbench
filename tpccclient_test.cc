@@ -144,7 +144,9 @@ TEST_F(TPCCClientTest, DoPaymentSmall) {
 }
 
 TEST_F(TPCCClientTest, DoNewOrder) {
-    client_.doNewOrder();
+    // minimum = rollback
+    db_->new_order_committed_ = false;
+    EXPECT_FALSE(client_.doNewOrder());
     EXPECT_EQ(1, db_->w_id_);
     EXPECT_EQ(1, db_->d_id_);
     EXPECT_EQ(2, db_->c_id_);
@@ -161,8 +163,10 @@ TEST_F(TPCCClientTest, DoNewOrder) {
         EXPECT_EQ(1, db_->items_[0].ol_quantity);
     }
 
+    // maximum = commit
+    db_->new_order_committed_ = true;
     generator_->minimum_ = false;
-    client_.doNewOrder();
+    EXPECT_TRUE(client_.doNewOrder());
     EXPECT_EQ(WAREHOUSES, db_->w_id_);
     EXPECT_EQ(District::NUM_PER_WAREHOUSE, db_->d_id_);
     EXPECT_EQ(72, db_->c_id_);
@@ -178,7 +182,8 @@ TEST_F(TPCCClientTest, DoNewOrder) {
 
 TEST_F(TPCCClientTest, DoNewOrderSmall) {
     TPCCClient* small = makeSmallClient();
-    small->doNewOrder();
+    db_->new_order_committed_ = false;
+    EXPECT_FALSE(small->doNewOrder());
     EXPECT_EQ(2, db_->c_id_);
 
     for (int i = 0; i < db_->items_.size(); ++i) {
@@ -187,7 +192,8 @@ TEST_F(TPCCClientTest, DoNewOrderSmall) {
     }
 
     generator_->minimum_ = false;
-    small->doNewOrder();
+    db_->new_order_committed_ = true;
+    EXPECT_TRUE(small->doNewOrder());
     EXPECT_EQ(4, db_->c_id_);
     for (int i = 0; i < db_->items_.size(); ++i) {
         EXPECT_EQ(42, db_->items_[i].i_id);

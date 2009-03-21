@@ -10,6 +10,8 @@ namespace tpcc {
 
 class MockTPCCDB : public TPCCDB {
 public:
+    MockTPCCDB() : new_order_committed_(true) {}
+
     virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
         w_id_ = warehouse_id;
         d_id_ = district_id;
@@ -39,7 +41,9 @@ public:
         c_id_ = customer_id;
         items_ = items;
         now_ = now;
-        return true;
+
+        output->d_tax = 42;
+        return new_order_committed_;
     }
 
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
@@ -85,6 +89,8 @@ public:
     int32_t c_id_;
     float h_amount_;
     std::vector<NewOrderItem> items_;
+
+    bool new_order_committed_;
 };
 
 }  // namespace tpcc

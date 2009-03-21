@@ -110,7 +110,7 @@ void TPCCClient::doPayment() {
     }
 }
 
-void TPCCClient::doNewOrder() {
+bool TPCCClient::doNewOrder() {
     int32_t w_id = generateWarehouse();
     int ol_cnt = generator_->number(Order::MIN_OL_CNT, Order::MAX_OL_CNT);
 
@@ -137,7 +137,9 @@ void TPCCClient::doNewOrder() {
     char now[Clock::DATETIME_SIZE+1];
     clock_->getDateTimestamp(now);
     NewOrderOutput output;
-    db_->newOrder(w_id, generateDistrict(), generateCID(), items, now, &output);
+    bool result = db_->newOrder(w_id, generateDistrict(), generateCID(), items, now, &output);
+    assert(result == !rollback);
+    return result;
 }
 
 void TPCCClient::doOne() {
