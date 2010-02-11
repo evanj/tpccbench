@@ -4,6 +4,7 @@
 #ifndef STUPIDUNIT_H__
 #define STUPIDUNIT_H__
 
+#include <cstdlib>
 #include <string>
 #include <vector>
 
