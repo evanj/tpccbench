@@ -29,7 +29,7 @@ void TestSuite::registerTest(Test* (*test_factory)()) {
 // JSON requires the following characters to be escaped in strings:
 // quotation mark, revrse solidus, and U+0000 through U+001F.
 // http://www.ietf.org/rfc/rfc4627.txt
-void jsonEscape(string* s) {
+static void jsonEscape(string* s) {
     static const char ESCAPES[] = { '"', '\\', '\b', '\f', '\n', '\r', '\t' };
     static const char REPLACEMENTS[] = { '"', '\\', 'b', 'f', 'n', 'r', 't' };
     ASSERT(sizeof(ESCAPES) == sizeof(REPLACEMENTS));
@@ -184,10 +184,23 @@ const string& Test::stupidunitError(int i) const {
 
 namespace stupidunit {
 
+// P_tmpdir comes from stdio.h (see tempnam). TODO: Look at environment variables?
 ChTempDir::ChTempDir() : name_(P_tmpdir) {
-    name_ += "/test_XXXXXX";
-    // Abuse the type system to modify the string in place
-    char* result = mkdtemp(const_cast<char*>(name_.c_str()));
+    if (name_[name_.size()-1] != '/') {
+        name_.push_back('/');
+    }
+    name_ += "test_XXXXXX";
+    // Abuse the string to modify it in place
+#ifndef __sun
+    char* result = mkdtemp(&*name_.begin());
+#else
+    // Solaris doesn't seem to have mkdtemp?
+    char* result = NULL;
+    char* temp = &*name_.begin();
+    if (mktemp(temp) && mkdir(temp, 0700) == 0) {
+        result = temp;
+    }
+#endif
     // TODO: Abort/throw on error
     ASSERT(result != NULL);
     ASSERT(result == name_.c_str());
@@ -270,8 +283,14 @@ ExpectDeathStatus expectDeath() {
     string output;
     char buffer[4096];
     ssize_t bytes = 0;
-    while ((bytes = read(pipe_descriptors[0], buffer, sizeof(buffer))) > 0) {
-        output.append(buffer, bytes);
+    while ((bytes = read(pipe_descriptors[0], buffer, sizeof(buffer))) > 0
+            || (bytes == -1 && errno == EINTR)) {
+        if (bytes == -1) {
+            // On Mac OS X under gdb, read returns EINTR when the child dies: ignore it
+            assert(errno == EINTR);
+        } else {
+            output.append(buffer, bytes);
+        }
     }
     ASSERT(bytes == 0);
     error = close(pipe_descriptors[0]);
