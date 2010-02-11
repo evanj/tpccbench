@@ -115,6 +115,13 @@ private:
     // Erases history from the database. NOTE: This is only for undoing transactions.
     void eraseHistory(const History* history);
 
+    // Allocates an undo buffer if needed, storing the pointer in *undo.
+    void allocateUndo(TPCCUndo** undo) {
+        if (undo != NULL && *undo == NULL) {
+            *undo = new TPCCUndo();
+        }
+    }
+
     // TODO: Use a data structure that supports deletes, appends, and sparse ranges.
     // Using a vector instead of a BPlusTree reduced the new order run time by 3.65us. This was an
     // improvement of 12%. It also saved 4141kB of RSS.

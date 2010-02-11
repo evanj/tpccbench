@@ -36,10 +36,15 @@ public:
     static const int32_t MAX_OL_QUANTITY = 10;
 
     // Sets the remote item probability in units of thousandths of probability (10 = p(x) = 0.01)
+    // The probability of a new order transaction being remote is given by the following python:
+    // p_local = ((1-p_item_remote)**5 - (1-p_item_remote)**16)/(11.*p_item_remote)
+    // see scale_tpcc_mptxns.py for details.
     void remote_item_milli_p(int remote_item_milli_p);
 
     // Bind this client to a specific warehouse and district. 0 means any, a value means fixed.
     void bindWarehouseDistrict(int warehouse, int district);
+
+    TPCCDB* db() { return db_; }
 
 private:
     int32_t generateWarehouse();

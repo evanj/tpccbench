@@ -214,9 +214,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
 
     // We will not abort: update the status and the database state, allocate an undo buffer
     output->status[0] = '\0';
-    if (undo != NULL && *undo == NULL) {
-        *undo = new TPCCUndo();
-    }
+    allocateUndo(undo);
 
     // Modify the order id to assign it
     if (undo != NULL) {
@@ -307,9 +305,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
     }
 
     // We will not abort: allocate an undo buffer
-    if (undo != NULL && *undo == NULL) {
-        *undo = new TPCCUndo();
-    }
+    allocateUndo(undo);
 
     out_quantities->resize(items.size());
     for (int i = 0; i < items.size(); ++i) {
@@ -417,9 +413,7 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
         PaymentOutput* output, TPCCUndo** undo) {
     Warehouse* w = findWarehouse(warehouse_id);
     if (undo != NULL) {
-        if (*undo == NULL) {
-            *undo = new TPCCUndo();
-        }
+        allocateUndo(undo);
         (*undo)->save(w);
     }
     w->w_ytd += h_amount;
@@ -466,9 +460,7 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
 void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
         float h_amount, PaymentOutput* output, TPCCUndo** undo) {
     if (undo != NULL) {
-        if (*undo == NULL) {
-            *undo = new TPCCUndo();
-        }
+        allocateUndo(undo);
         (*undo)->save(c);
     }
     c->c_balance -= h_amount;
@@ -518,9 +510,7 @@ static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id);
 void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
         std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) {
     //~ printf("delivery %d %d %s\n", warehouse_id, carrier_id, now);
-    if (undo != NULL && *undo == NULL) {
-        *undo = new TPCCUndo();
-    }
+    allocateUndo(undo);
     orders->clear();
     for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; ++d_id) {
         // Find and remove the lowest numbered order for the district
@@ -552,14 +542,18 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
 
         Order* o = findOrder(warehouse_id, d_id, o_id);
         assert(o->o_carrier_id == Order::NULL_CARRIER_ID);
-        if (undo != NULL) (*undo)->save(o);
+        if (undo != NULL) {
+            (*undo)->save(o);
+        }
         o->o_carrier_id = carrier_id;
 
         float total = 0;
         // TODO: Select based on (w_id, d_id, o_id) rather than using ol_number?
         for (int32_t i = 1; i <= o->o_ol_cnt; ++i) {
             OrderLine* line = findOrderLine(warehouse_id, d_id, o_id, i);
-            if (undo != NULL) (*undo)->save(line);
+            if (undo != NULL) {
+                (*undo)->save(line);
+            }
             assert(0 == strlen(line->ol_delivery_d));
             strcpy(line->ol_delivery_d, now);
             assert(strlen(line->ol_delivery_d) == DATETIME_SIZE);
@@ -567,7 +561,9 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
         }
 
         Customer* c = findCustomer(warehouse_id, d_id, o->o_c_id);
-        if (undo != NULL) (*undo)->save(c);
+        if (undo != NULL) {
+            (*undo)->save(c);
+        }
         c->c_balance += total;
         c->c_delivery_cnt += 1;
     }
@@ -648,6 +644,7 @@ static void erase(BPlusTree<KeyType, T*, TPCCTables::KEYS_PER_INTERNAL, TPCCTabl
     ASSERT(out == value);
     bool result = tree->del(key);
     ASSERT(result);
+    ASSERT(!tree->find(key));
 }
 
 void TPCCTables::insertItem(const Item& item) {
