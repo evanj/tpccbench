@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>

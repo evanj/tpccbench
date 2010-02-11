@@ -4,9 +4,6 @@
 #ifndef STUPIDUNIT_H__
 #define STUPIDUNIT_H__
 
-#include <stdlib.h>
-
-#include <cassert>
 #include <string>
 #include <vector>
 

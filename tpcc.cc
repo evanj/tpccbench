@@ -1,5 +1,6 @@
 #define __STDC_FORMAT_MACROS
 #include <climits>
+#include <cstdio>
 #include <inttypes.h>
 
 #include "clock.h"
