@@ -103,12 +103,14 @@ bool find(const KEY& key, VALUE* value= 0) const {
     inner= reinterpret_cast<const InnerNode*>(node);
     assert( inner->type == NODE_INNER );
     index= inner_position_for(key, inner->keys, inner->num_keys);
+    assert(index < inner->num_keys + 1);
     node= inner->children[index];
   }
   const LeafNode* leaf= reinterpret_cast<const LeafNode*>(node);
   assert( leaf->type == NODE_LEAF );
   index= leaf_position_for(key, leaf->keys, leaf->num_keys);
-  if( leaf->keys[index] == key ) {
+  assert(index <= leaf->num_keys);
+  if( index < leaf->num_keys && leaf->keys[index] == key ) {
     if( value != 0 ) {
       *value= leaf->values[index];
     }
@@ -216,10 +218,12 @@ private:
         // Leaf nodes store pairs of keys and values.
         struct LeafNode {
 #ifndef NDEBUG
-	  LeafNode() : type(NODE_LEAF), num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
+	  // Leaf nodes need to memset the keys: when inserting the first key, we
+      // check to see if we need to overwrite or insert
+	  LeafNode() : type(NODE_LEAF), num_keys(0) {memset(keys,0,sizeof(keys));}
                 const NodeType type;
 #else
-                LeafNode() : num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
+                LeafNode() : num_keys(0) {memset(keys,0,sizeof(keys));}
 #endif
                 unsigned num_keys;
                 KEY      keys[M];
@@ -230,10 +234,10 @@ private:
         // Inner nodes store pointers to other nodes interleaved with keys.
         struct InnerNode {
 #ifndef NDEBUG
-                InnerNode() : type(NODE_INNER), num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
+                InnerNode() : type(NODE_INNER), num_keys(0) {}
                 const NodeType type;
 #else
-                InnerNode() : num_keys(0) {memset(keys,0,sizeof(KEY)*M);}
+                InnerNode() : num_keys(0) {}
 #endif
                 unsigned num_keys;
                 KEY      keys[N];
@@ -388,10 +392,9 @@ private:
                         unsigned index) {
                 assert( node->type == NODE_LEAF );
                 assert( node->num_keys < M );
-                assert( index <= M );
+                assert( index < M );
                 assert( index <= node->num_keys );
-                if( (index < M) && 
-		    (node->keys[index] == key) ) {
+                if( node->keys[index] == key ) {
                         // We are inserting a duplicate value.
                         // Simply overwrite the old one
                         node->values[index]= value;
