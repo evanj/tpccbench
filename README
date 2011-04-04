@@ -1,0 +1,20 @@
+The benchmark program is "tpcc". This loads the TPC-C database with the
+specified number of warehouses, then executes a number of transactions
+(currently 200000). This benchmark is, I believe, a complete and correct TPC-C
+implementation. There are a few noted discrepancies noted in "CHEATS". If there
+are bugs, problems, fixes, or questions, please let me know.
+
+
+I have another implementation that supports "locking." If you are interested
+in this, talk to me.
+
+
+Overview of the code:
+
+Everything that ends in _test is a unit test to verify that the code is correct.
+
+tpccgenerate.cc: Code for loading the database.
+tpccclient.cc: Code for generating client requests.
+tpccdb.h: Definitions of the tuple types and constant
+tpcctables.cc: Actual implementation of the in-memory data structures and
+    TPC-C stored procedures.
