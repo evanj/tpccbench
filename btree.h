@@ -1,10 +1,12 @@
 #if !defined BPLUSTREE_HPP_227824
 #define BPLUSTREE_HPP_227824
 
-// This is required for glibc to define std::posix_memalign
+/*
+On older Linux systems, this is required for glibc to define std::posix_memalign
 #if !defined(_XOPEN_SOURCE) || (_XOPEN_SOURCE < 600)
 #define _XOPEN_SOURCE 600
 #endif
+*/
 
 #include <assert.h>
 #include <stdlib.h>
