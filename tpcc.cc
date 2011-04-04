@@ -1,3 +1,7 @@
+// Copyright 2008,2009,2010 Massachusetts Institute of Technology.
+// All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 #define __STDC_FORMAT_MACROS
 #include <climits>
 #include <cstdio>
@@ -9,6 +13,8 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
+
+static const int NUM_TRANSACTIONS = 200000;
 
 int main(int argc, const char* argv[]) {
     if (argc != 2) {
@@ -51,7 +57,7 @@ int main(int argc, const char* argv[]) {
         generator.makeWarehouse(tables, i+1);
     }
     int64_t end = clock->getMicroseconds();
-    printf("%"PRId64" ms\n", (end-begin)/1000);
+    printf("%"PRId64" ms\n", (end - begin + 500)/1000);
 
     // Change the constants for run
     random = new tpcc::RealRandomGenerator();
@@ -63,11 +69,13 @@ int main(int argc, const char* argv[]) {
     printf("Running... ");
     fflush(stdout);
     begin = clock->getMicroseconds();
-    for (int i = 0; i < 200000; ++i) {
+    for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
         client.doOne();
     }
     end = clock->getMicroseconds();
-    printf("%"PRId64" ms\n", (end-begin)/1000);
+    int64_t microseconds = end - begin;
+    printf("%d transactions in %"PRId64" ms = %f txns/s\n", NUM_TRANSACTIONS,
+            (microseconds + 500)/1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
 
     return 0;
 }
