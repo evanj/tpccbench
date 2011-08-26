@@ -1,12 +1,29 @@
+Stand-alone version of an in-memory TPC-C implementation. This is based on
+the prototype used for the VLDB 2007 paper:
+
+http://www.vldb.org/conf/2007/papers/industrial/p1150-stonebraker.pdf
+
+However it was rewritten and is "more correct" because it follows the spec
+much closer.
+
+Evan Jones
+evanj@csail.mit.edu
+
+
 The benchmark program is "tpcc". This loads the TPC-C database with the
 specified number of warehouses, then executes a number of transactions
 (currently 200000). This benchmark is, I believe, a complete and correct TPC-C
 implementation. There are a few noted discrepancies noted in "CHEATS". If there
 are bugs, problems, fixes, or questions, please let me know.
 
-
 I have another implementation that supports "locking." If you are interested
 in this, talk to me.
+
+This is configured to look for "boost" in the directory above the check out.
+I generally have my code configured like this:
+
+tpccstuff/boost - A copy of the boost directory
+tpccstuff/tpccbench
 
 
 Overview of the code:
@@ -18,3 +35,9 @@ tpccclient.cc: Code for generating client requests.
 tpccdb.h: Definitions of the tuple types and constant
 tpcctables.cc: Actual implementation of the in-memory data structures and
     TPC-C stored procedures.
+
+
+Type "make", then you can run ./tpcc. I get output like:
+
+Loading 2 warehouses... 4504 ms
+Running... 200000 transactions in 6630 ms = 30167.577878 txns/s
