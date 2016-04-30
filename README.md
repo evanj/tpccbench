@@ -36,3 +36,9 @@ Type "make", then you can run ./tpcc. I get output like:
 
 Loading 2 warehouses... 4504 ms
 Running... 200000 transactions in 6630 ms = 30167.577878 txns/s
+
+
+## Licensing
+
+This was written during my PhD at MIT. However, I did go through MIT's open
+source office to release it under a BSD license. See the LICENSE file.
