@@ -145,6 +145,14 @@ bool doFind(const map<int, int>& std_map, const BPlusTree<int, int, 3, 3>& tree,
     }
 }
 
+template <typename T> size_t chooseIndex(const vector<T>& v) {
+    return static_cast<size_t>(random()) % v.size();
+}
+
+template <typename T> T choose(const vector<T>& v) {
+    return v[chooseIndex(v)];
+}
+
 TEST_F(BTreeTest, RandomInsertUnique) {
     srandom(static_cast<unsigned int>(time(NULL)));
 
@@ -162,7 +170,7 @@ TEST_F(BTreeTest, RandomInsertUnique) {
         if (loops % 2 == 0) {
             value = static_cast<int>(random());
         } else {
-            value = values[random() % values.size()];
+            value = choose(values);
         }
 
         pair<map<int, int>::iterator, bool> map_result = std_map.insert(std::make_pair(value, loops+1));
@@ -175,11 +183,11 @@ TEST_F(BTreeTest, RandomInsertUnique) {
         }
 
         // Find a value in the set
-        value = values[random() % values.size()];
+        value = choose(values);
         //~ printf("find %d\n", value);
         ASSERT_TRUE(doFind(std_map, tree_, value));
 
-        // Find a value not in the set
+        // Find a value that is likely not in the set
         value = static_cast<int>(random());
         vector<int>::iterator it = std::find(values.begin(), values.end(), value);
         //~ printf("find %d\n", value);
@@ -187,9 +195,9 @@ TEST_F(BTreeTest, RandomInsertUnique) {
 
         // Randomly delete a value from the set
         if (loops % 3 == 2) {
-            size_t index = random() % values.size();
+            size_t index = chooseIndex(values);
             value = values[index];
-            values.erase(values.begin() + index);
+            values.erase(values.begin() + static_cast<ssize_t>(index));
             //~ printf("del %d\n", value);
             std_map.erase(std_map.find(value));
             tree_.del(value);

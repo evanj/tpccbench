@@ -15,27 +15,10 @@ void Address::copy(char* street1, char* street2, char* city, char* state, char* 
     memcpy(zip, src_zip, ZIP+1);
 }
 
-// Non-integral constants must be defined in a .cc file. Needed for Mac OS X.
-// http://www.research.att.com/~bs/bs_faq2.html#in-class
-const float Item::MIN_PRICE;
-const float Item::MAX_PRICE;
-const float Warehouse::MIN_TAX;
-const float Warehouse::MAX_TAX;
-const float Warehouse::INITIAL_YTD;
-const float District::MIN_TAX;
-const float District::MAX_TAX;
-const float District::INITIAL_YTD;  // different from Warehouse
-const float Customer::MIN_DISCOUNT;
-const float Customer::MAX_DISCOUNT;
-const float Customer::INITIAL_BALANCE;
-const float Customer::INITIAL_CREDIT_LIM;
-const float Customer::INITIAL_YTD_PAYMENT;
+// Non-integral constants must be defined in a .cc file according to the standard
 const char Customer::GOOD_CREDIT[] = "GC";
 const char Customer::BAD_CREDIT[] = "BC";
-const float OrderLine::MIN_AMOUNT;
-const float OrderLine::MAX_AMOUNT;
 const char NewOrderOutput::INVALID_ITEM_STATUS[] = "Item number is not valid";
-const float History::INITIAL_AMOUNT;
 
 TPCCUndo::~TPCCUndo() {
     STLDeleteValues(&modified_warehouses_);
@@ -48,8 +31,8 @@ TPCCUndo::~TPCCUndo() {
 }
 
 template <typename T>
-static void copyIfNeeded(typename std::tr1::unordered_map<T*, T*>* map, T* source) {
-    typedef typename std::tr1::unordered_map<T*, T*> MapType;
+static void copyIfNeeded(typename std::unordered_map<T*, T*>* map, T* source) {
+    typedef typename std::unordered_map<T*, T*> MapType;
     std::pair<typename MapType::iterator, bool> result = map->insert(
             typename MapType::value_type(source, NULL));
     if (result.second) {

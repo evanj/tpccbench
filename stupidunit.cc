@@ -39,7 +39,7 @@ static void jsonEscape(string* s) {
         if ((0 <= c && c <= 0x1f) || c == '"' || c =='\\') {
             // The character must be replaced with something: look in escapes
             bool replaced = false;
-            for (int j = 0; j < sizeof(ESCAPES); ++j) {
+            for (size_t j = 0; j < sizeof(ESCAPES); ++j) {
                 if (ESCAPES[j] == c) {
                     replaced = true;
                     (*s)[i] = '\\';
@@ -137,7 +137,7 @@ int TestSuite::runAll() {
             }
 
             ssize_t bytes = write(json_output, json.data(), json.size());
-            ASSERT(bytes == json.size());
+            ASSERT(static_cast<size_t>(bytes) == json.size());
         }
 
         // Clean up the test
@@ -177,7 +177,7 @@ void Test::printErrors() const {
     }
 }
 
-const string& Test::stupidunitError(int i) const {
+const string& Test::stupidunitError(size_t i) const {
     ASSERT(0 <= i && i < errors_.size());
     return errors_[i];
 }
@@ -289,7 +289,7 @@ ExpectDeathStatus expectDeath() {
             // On Mac OS X under gdb, read returns EINTR when the child dies: ignore it
             assert(errno == EINTR);
         } else {
-            output.append(buffer, bytes);
+            output.append(buffer, static_cast<size_t>(bytes));
         }
     }
     ASSERT(bytes == 0);

@@ -57,7 +57,7 @@ int main(int argc, const char* argv[]) {
         generator.makeWarehouse(tables, i+1);
     }
     int64_t end = clock->getMicroseconds();
-    printf("%"PRId64" ms\n", (end - begin + 500)/1000);
+    printf("%" PRId64 " ms\n", (end - begin + 500)/1000);
 
     // Change the constants for run
     random = new tpcc::RealRandomGenerator();
@@ -74,7 +74,7 @@ int main(int argc, const char* argv[]) {
     }
     end = clock->getMicroseconds();
     int64_t microseconds = end - begin;
-    printf("%d transactions in %"PRId64" ms = %f txns/s\n", NUM_TRANSACTIONS,
+    printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
             (microseconds + 500)/1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
 
     return 0;

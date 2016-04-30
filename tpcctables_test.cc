@@ -65,7 +65,7 @@ public:
     static const int32_t SUPPLY_W_ID = 5;
     static const int32_t QUANTITY = 6;
     static const int32_t ITEM_IM_ID = 52;
-    static const float ITEM_PRICE = 1.09f;
+    static constexpr float ITEM_PRICE = 1.09f;
 
     void makeDistrict(int32_t w_id, int32_t d_id, int32_t next_o_id) {
         District d;

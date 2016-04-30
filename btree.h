@@ -1,3 +1,20 @@
+// This implemantion appears to have originally come from the following location:
+// https://en.wikibooks.org/wiki/Algorithm_Implementation/Trees/B%2B_tree
+// It has been modified from its original form somewhat.
+
+/* Copyright (C) 2006 David Garcia
+ * You may use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of this software subject to the following conditions:
+ * THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+ * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+
 #if !defined BPLUSTREE_HPP_227824
 #define BPLUSTREE_HPP_227824
 
@@ -12,17 +29,14 @@ On older Linux systems, this is required for glibc to define std::posix_memalign
 #include <stdlib.h>
 #include <string.h>
 
-#include <boost/static_assert.hpp>
-#include <boost/pool/object_pool.hpp>
-
 // DEBUG
 #include <iostream>
 using std::cout;
 using std::endl;
 
-#ifdef __linux__
+// Recent Mac OS X includes posix_memalign: If you are using an ancient version,
+// undefine this
 #define HAVE_POSIX_MEMALIGN
-#endif
 
 #ifdef HAVE_POSIX_MEMALIGN
 // Nothing to do
@@ -40,25 +54,24 @@ template <typename KEY, typename VALUE, unsigned N, unsigned M,
 class BPlusTree
 {
 public:
-        // N must be greater than two to make the split of
-        // two inner nodes sensible.
-        BOOST_STATIC_ASSERT(N>2);
-        // Leaf nodes must be able to hold at least one element
-        BOOST_STATIC_ASSERT(M>0);
-
         // Builds a new empty tree.
         BPlusTree()
         : depth(0),
-          root(new_leaf_node())
+          root(new LeafNode())
         {
+                // Previously used BOOST_STATIC_ASSERT:
+                // N must be greater than two to make the split of
+                // two inner nodes sensible.
+                assert(N>2);
+                // Leaf nodes must be able to hold at least one element
+                assert(M>0);
                 // DEBUG
                 // cout << "sizeof(LeafNode)==" << sizeof(LeafNode) << endl;
                 // cout << "sizeof(InnerNode)==" << sizeof(InnerNode) << endl;
         }
 
         ~BPlusTree() {
-                // Empty. Memory deallocation is done automatically
-                // when innerPool and leafPool are destroyed.
+                // TODO: Previously used boost:pool. To remove dependency, we now just leak
         }
 
         // Inserts a pair (key, value). If there is a previous pair with
@@ -84,7 +97,7 @@ public:
                         // The old root was splitted in two parts.
                         // We have to create a new root pointing to them
                         depth++;
-                        root= new_inner_node();
+                        root= new InnerNode();
                         InnerNode* rootProxy=
                                 reinterpret_cast<InnerNode*>(root);
                         rootProxy->num_keys= 1;
@@ -99,8 +112,8 @@ public:
 // unless the pointer is null.
 bool find(const KEY& key, VALUE* value= 0) const {
   const InnerNode* inner;
-  register const void* node= root;
-  register unsigned d= depth, index;
+  const void* node= root;
+  unsigned d= depth, index;
   while( d-- != 0 ) {
     inner= reinterpret_cast<const InnerNode*>(node);
     assert( inner->type == NODE_INNER );
@@ -131,8 +144,8 @@ bool find(const KEY& key, VALUE* value= 0) const {
 // Note: del currently leaks memory. Fix later.
 bool del(const KEY& key) {
   InnerNode* inner;
-  register void* node= root;
-  register unsigned d= depth, index;
+  void* node= root;
+  unsigned d= depth, index;
   while( d-- != 0 ) {
     inner= reinterpret_cast<InnerNode*>(node);
     assert( inner->type == NODE_INNER );
@@ -241,6 +254,7 @@ private:
 #else
                 InnerNode() : num_keys(0) {}
 #endif
+
                 unsigned num_keys;
                 KEY      keys[N];
                 void*    children[N+1];
@@ -266,40 +280,6 @@ private:
                 { std::free(block); }
         };
 
-        // Returns a pointer to a fresh leaf node.
-        LeafNode* new_leaf_node() {
-                LeafNode* result;
-                //result= new LeafNode();
-                result= leafPool.construct();
-                //cout << "New LeafNode at " << result << endl;
-                return result;
-        }
-
-        // Frees a leaf node previously allocated with new_leaf_node()
-        void delete_leaf_node(LeafNode* node) {
-                assert( node->type == NODE_LEAF );
-                //cout << "Deleting LeafNode at " << node << endl;
-                // Alternatively: delete node;
-                leafPool.destroy(node);
-        }
-
-        // Returns a pointer to a fresh inner node.
-        InnerNode* new_inner_node() {
-                InnerNode* result;
-                // Alternatively: result= new InnerNode();
-                result= innerPool.construct();
-                //cout << "New InnerNode at " << result << endl;
-                return result;
-        }
-
-        // Frees an inner node previously allocated with new_inner_node()
-        void delete_inner_node(InnerNode* node) {
-                assert( node->type == NODE_INNER );
-                //cout << "Deleting InnerNode at " << node << endl;
-                // Alternatively: delete node;
-                innerPool.destroy(node);
-        }
-        
         // Data type returned by the private insertion methods.
         struct InsertionResult {
                 KEY key;
@@ -362,7 +342,7 @@ private:
                 if( node->num_keys == M ) {
                         // The node was full. We must split it
                         unsigned treshold= (M+1)/2;
-                        LeafNode* new_sibling= new_leaf_node();
+                        LeafNode* new_sibling= new LeafNode();
                         new_sibling->num_keys= node->num_keys -treshold;
                         for(unsigned j=0; j < new_sibling->num_keys; ++j) {
                                 new_sibling->keys[j]= node->keys[treshold+j];
@@ -423,7 +403,7 @@ private:
                 if( node->num_keys == N ) {
                         // Split
                         unsigned treshold= (N+1)/2;
-                        InnerNode* new_sibling= new_inner_node();
+                        InnerNode* new_sibling= new InnerNode();
                         new_sibling->num_keys= node->num_keys -treshold;
                         for(unsigned i=0; i < new_sibling->num_keys; ++i) {
                                 new_sibling->keys[i]= node->keys[treshold+i];
@@ -507,11 +487,6 @@ private:
 
         typedef AlignedMemoryAllocator<NODE_ALIGNMENT> AlignedAllocator;
 
-        // Node memory allocators. IMPORTANT NOTE: they must be declared
-        // before the root to make sure that they are properly initialised
-        // before being used to allocate any node.
-        boost::object_pool<InnerNode, AlignedAllocator> innerPool;
-        boost::object_pool<LeafNode, AlignedAllocator>  leafPool;
         // Depth of the tree. A tree of depth 0 only has a leaf node.
         unsigned depth;
         // Pointer to the root node. It may be a leaf or an inner node, but

@@ -1,13 +1,14 @@
-Stand-alone version of an in-memory TPC-C implementation. This is based on
-the prototype used for the VLDB 2007 paper:
+# tpccbench
+
+Stand-alone in-memory TPC-C implementation. This is based on the prototype
+used for the following VLDB 2007 paper:
 
 http://www.vldb.org/conf/2007/papers/industrial/p1150-stonebraker.pdf
 
-However it was rewritten and is "more correct" because it follows the spec
-much closer.
+However it was rewritten and follows the spec more closely.
 
 Evan Jones
-evanj@csail.mit.edu
+ej@evanjones.ca
 
 
 The benchmark program is "tpcc". This loads the TPC-C database with the
@@ -19,14 +20,8 @@ are bugs, problems, fixes, or questions, please let me know.
 I have another implementation that supports "locking." If you are interested
 in this, talk to me.
 
-This is configured to look for "boost" in the directory above the check out.
-I generally have my code configured like this:
 
-tpccstuff/boost - A copy of the boost directory
-tpccstuff/tpccbench
-
-
-Overview of the code:
+## Overview of the code:
 
 Everything that ends in _test is a unit test to verify that the code is correct.
 

@@ -47,7 +47,7 @@ public:
     void printErrors() const;
 
     int stupidunitNumErrors() const { return static_cast<int>(errors_.size()); }
-    const std::string& stupidunitError(int i) const;
+    const std::string& stupidunitError(size_t i) const;
 
 private:
     // Contains error messages if the test failed.

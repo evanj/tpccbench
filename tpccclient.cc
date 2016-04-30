@@ -10,11 +10,6 @@
 
 using std::vector;
 
-// Non-integral constants must be defined in a .cc file. Needed for Mac OS X.
-// http://www.research.att.com/~bs/bs_faq2.html#in-class
-const float TPCCClient::MIN_PAYMENT_AMOUNT;
-const float TPCCClient::MAX_PAYMENT_AMOUNT;
-
 TPCCClient::TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* db, int num_items,
         int num_warehouses, int districts_per_warehouse, int customers_per_district) :
         clock_(clock),
