@@ -178,7 +178,7 @@ void Test::printErrors() const {
 }
 
 const string& Test::stupidunitError(size_t i) const {
-    ASSERT(0 <= i && i < errors_.size());
+    ASSERT(i < errors_.size());
     return errors_[i];
 }
 

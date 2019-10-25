@@ -1,5 +1,6 @@
 #include "btree.h"
 
+#include <algorithm>
 #include <map>
 
 #include "assert.h"
@@ -163,7 +164,7 @@ TEST_F(BTreeTest, RandomInsertUnique) {
     std_map.insert(std::make_pair(42, -1));
     values.push_back(42);
     //~ printf("insert %d = %d\n", 42, -1);
-    
+
     for (int loops = 0; loops < 1000; ++loops) {
         // Do an insert (alternating between new and old inserts)
         int value;
