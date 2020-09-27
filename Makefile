@@ -1,5 +1,7 @@
 WARNINGS = -Werror -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter
 
+LINK.o = $(LINK.cc)
+
 # gcc flags used for both debug and opt builds
 BASE_CXX_FLAGS := -MD $(CXXFLAGS) $(WARNINGS) -std=c++11
 
@@ -7,9 +9,6 @@ BASE_CXX_FLAGS := -MD $(CXXFLAGS) $(WARNINGS) -std=c++11
 CXXFLAGS = -g $(BASE_CXX_FLAGS)
 # Optimization flags
 #CXXFLAGS = -g -O3 -DNDEBUG $(BASE_CXX_FLAGS)
-
-# Link with the C++ standard library
-LDFLAGS=-lstdc++
 
 BINARIES = btree_test randomgenerator_test tpccclient_test tpcctables_test tpccgenerator_test tpcc
 
